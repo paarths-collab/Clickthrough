@@ -24,6 +24,37 @@ fi
 
 pack="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project="$(cd "$2" && pwd)"
+touched=""   # paths to commit, printed at the end
+touch_path() { case " $touched " in *" $1 "*) ;; *) touched="$touched $1" ;; esac; }
+
+# Many repos ignore all of .claude/ or .agents/. Then the files we add
+# never reach git, and cloud sessions never see them. Re-include only what
+# we add: turn an exact `.claude/` line into `.claude/*`, then add
+# `!.claude/<keep>`. Anything else in the folder stays ignored.
+keep_tracked() { # $1 = folder (.claude or .agents), $2 = path inside it to keep
+  local dir="$1" keep="$2" probe ignore esc tmp
+  git -C "$project" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  probe="$dir/$keep"
+  case "$keep" in */) probe="$dir/${keep}uf-run/SKILL.md" ;; esac
+  git -C "$project" check-ignore -q "$probe" 2>/dev/null || return 0
+  ignore="$project/.gitignore"
+  esc="\\$dir"
+  if [ -f "$ignore" ] && grep -qE "^/?${esc}/?$" "$ignore"; then
+    tmp="$ignore.uf-tmp"
+    awk -v d="$dir" '{ l = $0; sub(/^\//, "", l); sub(/\/$/, "", l); if (l == d) print d "/*"; else print }' "$ignore" > "$tmp"
+    mv "$tmp" "$ignore"
+  fi
+  if git -C "$project" check-ignore -q "$probe" 2>/dev/null; then
+    if [ -s "$ignore" ] && [ -n "$(tail -c1 "$ignore")" ]; then printf '\n' >> "$ignore"; fi
+    printf '!%s/%s\n' "$dir" "$keep" >> "$ignore"
+  fi
+  if git -C "$project" check-ignore -q "$probe" 2>/dev/null; then
+    echo "ignore   -> WARNING: $dir/$keep is still git-ignored by another rule; add it with git add -f" >&2
+  else
+    echo "ignore   -> .gitignore hid $dir/; now it keeps $dir/$keep and still ignores the rest"
+    touch_path .gitignore
+  fi
+}
 
 install_skills() { # $1 = skills folder inside the project
   local dest="$project/$1" skill
@@ -34,6 +65,8 @@ install_skills() { # $1 = skills folder inside the project
     cp -R "${skill%/}" "$dest/"
   done
   echo "skills   -> $1/ ($(ls "$pack/skills" | tr '\n' ' '))"
+  touch_path "$1"
+  keep_tracked "${1%%/*}" "skills/"
 }
 
 add_rules() { # $1 = instructions file inside the project
@@ -45,6 +78,7 @@ add_rules() { # $1 = instructions file inside the project
   if [ -s "$file" ]; then printf '\n' >> "$file"; fi
   cat "$pack/templates/rules-snippet.md" >> "$file"
   echo "rules    -> appended to $1"
+  touch_path "$1"
 }
 
 if [ "$target" = "claude" ] || [ "$target" = "both" ]; then
@@ -96,6 +130,8 @@ PY
 
 if [ "$target" = "plugin" ]; then
   enable_plugin
+  touch_path .claude/settings.json
+  keep_tracked .claude settings.json
   add_rules "CLAUDE.md"
 fi
 
@@ -106,6 +142,7 @@ cp "$pack/templates/report.md" "$pack/templates/decisions.md" "$uf/templates/"
 cp "$pack/scripts/new-run.sh" "$pack/scripts/collect-run.sh" "$pack/scripts/uf-check.py" "$uf/bin/"
 chmod +x "$uf/bin/new-run.sh" "$uf/bin/collect-run.sh" "$uf/bin/uf-check.py"
 echo "userflow -> .userflow/ (guide, templates, bin)"
+touch_path .userflow
 
 for keep in flows.yaml tool-gaps.md; do
   if [ -f "$uf/$keep" ]; then
@@ -125,18 +162,23 @@ for line in '.userflow/runs/' 'userflow-tests/.results/'; do
     if [ -s "$ignore" ] && [ -n "$(tail -c1 "$ignore")" ]; then printf '\n' >> "$ignore"; fi
     printf '# user-flow QA\n%s\n' "$line" >> "$ignore"
     echo "ignore   -> added $line to .gitignore"
+    touch_path .gitignore
   fi
 done
 
 cat <<EOF
 
 Installed. Next:
-  1. Put what the product is for in .userflow/flows.yaml (product.purpose),
-     or make sure there is a PRD or README the agent can read.
-  2. Building sessions now run uf-ready-check before saying "done"
-     (the rules were added to the instructions file).
-  3. For a release check, open a NEW agent session in $project
-     (not the one that built it) and ask:
-     "Is this project ready for real users? Use uf-run."
+  1. Commit and push:
+       git add$touched
+     Sessions only see what is on the branch they start from: merge it
+     into your default branch (or start sessions on this branch).
+  2. Open a NEW session (skills load when a session starts), one that did
+     not build the product, and ask:
+       "Is this project ready for real users? Use uf-run."
      Add "auto" to run without stopping for your review.
+
+From now on, building sessions run uf-ready-check before saying "done".
+Optional: if no README or spec says what the product is for, write it in
+.userflow/flows.yaml (product.purpose).
 EOF
