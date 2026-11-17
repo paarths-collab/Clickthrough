@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>API token - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <h1>API token</h1>
+  <p>Your personal token lets an AI assistant work the inbox as you, through the Helpline MCP server.</p>
+  <p><code id="token">…</code></p>
+  <h2>Connect an assistant</h2>
+  <p>Start the MCP server with your token in <code>HELPLINE_TOKEN</code>:</p>
+  <p><code>HELPLINE_TOKEN=&lt;your token&gt; npm run mcp</code></p>
+  <p class="muted">Tools: list_tickets, get_ticket, search_tickets, create_ticket, add_reply, set_status, assign_ticket.</p>
+</main>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  await boot(['agent', 'admin']);
+  const res = await api('GET', '/api/token');
+  $('token').textContent = res.data.token || 'No token';
+})();
+</script>
+</body>
+</html>

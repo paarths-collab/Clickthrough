@@ -81,6 +81,11 @@ plausibly do (for example "types a display name that is just a number").
 Set priorities now, before any result is known. Changing one later needs a
 reason written in `decisions.md` and in the report.
 
+Then load `uf-patterns` and go through it section by section. For every
+pattern that could apply to this product (a second route, an email, a
+setting, a background job, a count, a bulk action, a tool), make sure some
+flow would expose it. Add the flows that are missing.
+
 ## 5. Check coverage
 
 Run `python3 .userflow/bin/uf-check.py --stage flows` and fix every error.

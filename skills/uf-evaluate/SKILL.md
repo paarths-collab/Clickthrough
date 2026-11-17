@@ -35,16 +35,18 @@ Follow `.userflow/guide.md`. Log each step in `decisions.md`.
    `UF_EVIDENCE_DIR` set to `evidence/rerun` so the first run's evidence is
    kept. Same result: real failure. Different result: record it as flaky,
    and treat flaky as a failure, because users hit it too.
-4. **Walk every P0 flow by hand**, and every failed flow. Use a browser you
-   can see (a browser tool, or a script that takes a screenshot at each
-   step which you then look at). Follow the flow's steps as written. You
+4. **Walk every P0 flow by hand**, and every failed flow, through the
+   user's door, in a way that lets you see what they see (a browser or
+   screenshots for a UI; the real output for a CLI, API or library).
+   Follow the flow's steps as written. You
    are checking what tests miss: the page looks broken, the message is
    confusing or absent, the button is there but off-screen, the user is
    left with no idea what happened. Save what you saw in `evidence/walk/`.
    If you have no way to see the screen, log a tool gap and say the walk
    was not done.
-5. **Sweep the navigation.** As each persona, click every item in every
-   menu. Each one must open a real, working page. Record each result in the
+5. **Sweep the navigation.** As each persona, try every item the product
+   offers in its menus (or `--help`, docs, exported API). Each one must
+   lead to something real and working. Record each result in the
    report's Navigation table, with dead items and pages that have no way in.
 6. **Collect errors seen along the way**, including during flows that
    passed: console errors, failed requests, and errors in the server log

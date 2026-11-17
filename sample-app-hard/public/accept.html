@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Join the team - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body class="plain">
+<main>
+  <h1>Join the support team</h1>
+  <p id="intro">Checking your invitation…</p>
+  <form id="form" hidden>
+    <label for="name">Your name</label>
+    <input type="text" id="name">
+    <label for="password">Choose a password</label>
+    <input type="password" id="password">
+    <button type="submit">Join</button>
+  </form>
+  <p id="msg" class="msg"></p>
+</main>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  const token = param('token');
+  const invite = await api('GET', `/api/invites/${encodeURIComponent(token || 'none')}`);
+  if (!invite.ok) {
+    $('intro').textContent = invite.data.error || 'This invitation is invalid or was already used.';
+    return;
+  }
+  $('intro').textContent = `You were invited as ${invite.data.email}.`;
+  $('form').hidden = false;
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const res = await api('POST', '/api/invites/accept', { token, name: $('name').value, password: $('password').value });
+    if (!res.ok) return say('msg', res.data.error || 'Could not accept the invitation.', 'error');
+    location.href = '/dashboard.html';
+  });
+})();
+</script>
+</body>
+</html>

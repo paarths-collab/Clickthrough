@@ -88,7 +88,10 @@ cat <<EOF
 Installed. Next:
   1. Put what the product is for in .userflow/flows.yaml (product.purpose),
      or make sure there is a PRD or README the agent can read.
-  2. Open a NEW agent session in $project (not the one that built it).
-  3. Ask: "Is this project ready for real users? Use uf-run."
+  2. Building sessions now run uf-ready-check before saying "done"
+     (the rules were added to the instructions file).
+  3. For a release check, open a NEW agent session in $project
+     (not the one that built it) and ask:
+     "Is this project ready for real users? Use uf-run."
      Add "auto" to run without stopping for your review.
 EOF

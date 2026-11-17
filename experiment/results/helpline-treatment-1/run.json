@@ -1,0 +1,14 @@
+{
+  "run_id": "20261117T095810Z-54b1337",
+  "harness": "claude",
+  "model": "claude-fable-5-2",
+  "condition": "skills",
+  "mode": "auto",
+  "commit": "54b133783e2f8b5542034e632949a9a5a0bb20f6",
+  "uncommitted_changes": false,
+  "evaluator_independent": true,
+  "started_at": "2026-11-17T09:58:10Z",
+  "ended_at": "2026-11-17T10:40:41Z",
+  "tokens": null,
+  "notes": ""
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Ticket - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <p><a href="/portal.html">← My tickets</a></p>
+  <h1 id="title">Loading…</h1>
+  <p id="facts"></p>
+  <div id="thread"></div>
+  <form id="form" hidden>
+    <label for="body">Reply</label>
+    <textarea id="body"></textarea>
+    <p id="closed-note" class="muted" hidden>This ticket is closed. Replying will reopen it.</p>
+    <button type="submit">Send reply</button>
+    <button type="button" class="secondary" id="close" hidden>Close ticket</button>
+  </form>
+  <p id="msg" class="msg"></p>
+</main>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  await boot(['customer']);
+  const id = param('id');
+
+  async function load() {
+    const res = await api('GET', `/api/tickets/${encodeURIComponent(id)}`);
+    if (!res.ok) {
+      $('title').textContent = 'We could not find that ticket';
+      return;
+    }
+    const t = res.data;
+    $('title').textContent = `#${t.id} ${t.subject}`;
+    $('facts').innerHTML = `${badge(t.status)} ${badge(t.priority)} <span class="muted">opened ${when(t.created_at)}</span>`;
+    $('thread').innerHTML = `<div class="bubble"><div class="meta">${esc(t.customer.name)} wrote</div>${esc(t.description)}</div>` +
+      t.messages.map((msg) => `<div class="bubble"><div class="meta">${esc(msg.author_name)}${
+        msg.author_role === 'customer' ? '' : ' (support)'} · ${when(msg.created_at)}</div>${esc(msg.body)}</div>`).join('');
+    $('form').hidden = false;
+    $('closed-note').hidden = t.status !== 'closed';
+    $('close').hidden = t.status === 'closed';
+  }
+
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const res = await api('POST', `/api/tickets/${id}/messages`, { body: $('body').value });
+    if (!res.ok) return say('msg', res.data.error || 'Could not send your reply.', 'error');
+    $('body').value = '';
+    say('msg', 'Reply sent.', 'ok');
+    await load();
+  });
+
+  $('close').addEventListener('click', async () => {
+    const res = await api('PATCH', `/api/tickets/${id}`, { status: 'closed' });
+    if (!res.ok) return say('msg', res.data.error || 'Could not close the ticket.', 'error');
+    say('msg', 'Ticket closed.', 'ok');
+    await load();
+  });
+
+  await load();
+})();
+</script>
+</body>
+</html>

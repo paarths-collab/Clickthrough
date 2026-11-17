@@ -20,8 +20,10 @@ must be running.
    and route in a comment at the top. Record the path in the flow's
    `test_file`.
 2. **Use the project's end-to-end framework if it has one.** If it has
-   none, use Playwright for anything with a browser or HTTP, and the
-   official MCP client for MCP tools. Record the choice and the command
+   none, choose one that drives the user's door for this kind of product
+   (browser automation, an HTTP client, running the command, a small
+   program against the installed library, UI automation, an MCP client).
+   Prefer the project's own language. Record the choice and the command
    that runs all flow tests in `run.test_command`. Adding the test tool as
    a dev dependency is allowed; keep its config, helpers and scratch output
    inside `userflow-tests/` (scratch in `userflow-tests/.results/`).
@@ -67,6 +69,10 @@ For every step, check the `see`. Then, at the end, all four of these:
   bugs look fine until a refresh.
 - **Side effects**: the email, notification, job or call to another system
   listed in `side_effects`.
+
+What to check at the end of each flow comes from `uf-patterns`: the
+result after a refresh, the other user's view, the email and its links,
+the saved data, and that every process is still alive.
 
 Also listen during the whole flow and fail on what a user would suffer
 from: uncaught page errors, requests to this product that return 4xx or

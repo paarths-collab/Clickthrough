@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Ticket - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <p><a href="/inbox.html">← Inbox</a></p>
+  <h1 id="title">Loading…</h1>
+  <p id="customer" class="muted"></p>
+  <div id="controls" class="row" hidden>
+    <div><label for="status">Status</label>
+      <select id="status"><option value="open">Open</option><option value="pending">Pending</option><option value="closed">Closed</option></select></div>
+    <div><label for="priority">Priority</label>
+      <select id="priority"><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+    <div><label for="assignee">Assigned to</label><select id="assignee"><option value="">Unassigned</option></select></div>
+  </div>
+  <div id="thread"></div>
+  <form id="form" hidden>
+    <label for="body">Reply</label>
+    <textarea id="body"></textarea>
+    <div class="row">
+      <div><label for="canned">Insert a canned reply</label>
+        <select id="canned"><option value="">Choose…</option></select></div>
+      <div><label class="inline"><input type="checkbox" id="internal"> Internal note (customers never see this)</label></div>
+    </div>
+    <button type="submit">Send</button>
+    <button type="button" class="secondary" id="send-close">Send and close</button>
+  </form>
+  <p id="msg" class="msg"></p>
+</main>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  await boot(['agent', 'admin']);
+  const id = param('id');
+
+  const agents = await api('GET', '/api/agents');
+  for (const agent of agents.data) {
+    $('assignee').insertAdjacentHTML('beforeend', `<option value="${agent.id}">${esc(agent.name)}</option>`);
+  }
+  const canned = await api('GET', '/api/canned');
+  for (const item of canned.data) {
+    $('canned').insertAdjacentHTML('beforeend', `<option value="${item.id}">${esc(item.title)}</option>`);
+  }
+  $('canned').addEventListener('change', () => {
+    const item = canned.data.find((c) => String(c.id) === $('canned').value);
+    if (!item) return;
+    const current = $('body').value;
+    $('body').value = current ? `${current.replace(/\s+$/, '')}\n\n${item.body}` : item.body;
+    $('canned').value = '';
+  });
+
+  async function load() {
+    const res = await api('GET', `/api/tickets/${encodeURIComponent(id)}`);
+    if (!res.ok) {
+      $('title').textContent = 'Could not load this ticket';
+      $('controls').hidden = true;
+      $('form').hidden = true;
+      return;
+    }
+    const t = res.data;
+    $('title').textContent = `#${t.id} ${t.subject}`;
+    $('customer').textContent = `${t.customer.name} <${t.customer.email}> · opened ${when(t.created_at)}`;
+    $('status').value = t.status;
+    $('priority').value = t.priority;
+    $('assignee').value = t.assignee ? String(t.assignee.id) : '';
+    $('controls').hidden = false;
+    $('form').hidden = false;
+    $('thread').innerHTML = `<div class="bubble"><div class="meta">${esc(t.customer.name)} wrote</div>${esc(t.description)}</div>` +
+      t.messages.map((msg) => `<div class="bubble ${msg.internal ? 'internal' : ''}"><div class="meta">${esc(msg.author_name)}${
+        msg.internal ? ' · internal note' : ''} · ${when(msg.created_at)}</div>${esc(msg.body)}</div>`).join('');
+  }
+
+  async function change(field, value, done) {
+    const res = await api('PATCH', `/api/tickets/${id}`, { [field]: value });
+    if (!res.ok) return say('msg', res.data.error || 'Could not save that.', 'error');
+    say('msg', done, 'ok');
+    await load();
+  }
+  $('status').addEventListener('change', () => change('status', $('status').value, 'Status saved.'));
+  $('priority').addEventListener('change', () => change('priority', $('priority').value, 'Priority saved.'));
+  $('assignee').addEventListener('change', () =>
+    change('assignee_id', $('assignee').value ? Number($('assignee').value) : null, 'Assignment saved.'));
+
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const internal = $('internal').checked;
+    const res = await api('POST', `/api/tickets/${id}/messages`, { body: $('body').value, internal });
+    if (!res.ok) return say('msg', res.data.error || 'Could not send.', 'error');
+    $('body').value = '';
+    $('internal').checked = false;
+    say('msg', internal ? 'Internal note added.' : 'Reply sent to the customer.', 'ok');
+    await load();
+  });
+
+  $('send-close').addEventListener('click', async () => {
+    const res = await api('POST', `/api/tickets/${id}/reply-and-close`, { body: $('body').value });
+    if (!res.ok) return say('msg', res.data.error || 'Could not send.', 'error');
+    $('body').value = '';
+    say('msg', 'Reply sent to the customer and ticket closed.', 'ok');
+    await load();
+  });
+
+  await load();
+})();
+</script>
+</body>
+</html>

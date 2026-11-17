@@ -35,7 +35,9 @@ Open the real product as each persona, starting logged out.
 
 **Read the navigation first.** The sidebar, top bar, menus, tabs, footer and
 any "more" or account dropdowns are the product's own summary of what it
-offers. They give you the gist faster than any file. For each persona:
+offers. They give you the gist faster than any file. (For a CLI this is
+`--help` and its subcommands; for a library, the docs and exported API;
+for an API, its schema. See the table in `uf-patterns`.) For each persona:
 
 - List every navigation item as a surface of type `nav`. Take a screenshot
   of each menu, opened.

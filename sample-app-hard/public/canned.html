@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Canned replies - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <h1>Canned replies</h1>
+  <p class="muted">Ready-made answers you can insert into a reply from any ticket.</p>
+  <div id="list"></div>
+  <form id="form" hidden>
+    <h2 id="form-title">Add a canned reply</h2>
+    <label for="title">Title</label>
+    <input type="text" id="title">
+    <label for="body">Text</label>
+    <textarea id="body"></textarea>
+    <button type="submit" id="save">Save</button>
+    <button type="button" class="secondary" id="cancel" hidden>Cancel</button>
+  </form>
+  <p id="msg" class="msg"></p>
+</main>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  const user = await boot(['agent', 'admin']);
+  const admin = user.role === 'admin';
+  let editing = null;
+  let items = [];
+  $('form').hidden = !admin;
+
+  function startEdit(item) {
+    editing = item ? item.id : null;
+    $('form-title').textContent = item ? 'Edit canned reply' : 'Add a canned reply';
+    $('title').value = item ? item.title : '';
+    $('body').value = item ? item.body : '';
+    $('cancel').hidden = !item;
+  }
+
+  async function load() {
+    items = (await api('GET', '/api/canned')).data;
+    $('list').innerHTML = items.length
+      ? `<table><thead><tr><th>Title</th><th>Text</th>${admin ? '<th></th>' : ''}</tr></thead><tbody>${
+        items.map((c) => `<tr><td>${esc(c.title)}</td><td>${esc(c.body)}</td>${admin
+          ? `<td><button class="small secondary" data-edit="${c.id}">Edit</button> <button class="small danger" data-delete="${c.id}">Delete</button></td>`
+          : ''}</tr>`).join('')}</tbody></table>`
+      : '<p id="empty">No canned replies yet.</p>';
+  }
+
+  $('list').addEventListener('click', async (e) => {
+    if (e.target.dataset.edit) startEdit(items.find((c) => String(c.id) === e.target.dataset.edit));
+    if (e.target.dataset.delete) {
+      const res = await api('DELETE', `/api/canned/${e.target.dataset.delete}`);
+      if (!res.ok) return say('msg', res.data.error || 'Could not delete.', 'error');
+      say('msg', 'Canned reply deleted.', 'ok');
+      startEdit(null);
+      await load();
+    }
+  });
+  $('cancel').addEventListener('click', () => startEdit(null));
+
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = { title: $('title').value, body: $('body').value };
+    const res = editing
+      ? await api('PUT', `/api/canned/${editing}`, payload)
+      : await api('POST', '/api/canned', payload);
+    if (!res.ok) return say('msg', res.data.error || 'Could not save.', 'error');
+    say('msg', 'Canned reply saved.', 'ok');
+    startEdit(null);
+    await load();
+  });
+
+  await load();
+})();
+</script>
+</body>
+</html>

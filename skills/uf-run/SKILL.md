@@ -48,6 +48,9 @@ not merge phases or skip one because it looks unnecessary.
 
 For a large product, do phases 2 to 5 one area at a time, P0 flows first.
 
+Keep `uf-patterns` at hand through every phase. It is the list of what
+usually breaks between the parts of a product and how to see each one.
+
 ## Finishing
 
 1. Run `.userflow/bin/collect-run.sh`. If it finds no session log (common

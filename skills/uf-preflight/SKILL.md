@@ -29,33 +29,26 @@ Do them in order. Record the exact command and result for each.
 5. **Boot the whole stack with seed data.** Every part: frontend, backend,
    database, workers, MCP servers. If there is no single command that does
    it, write down the sequence that works and put it in the registry.
-6. **Check each service really responds.**
-   - Frontend: the entry page loads in a real browser with no console
-     errors, and is not a blank page.
-   - API: a health or simple read endpoint answers.
-   - Database: reachable, migrations applied, seed rows present.
-   - MCP server: connects, and lists the tools it claims to have.
-   - Workers and jobs: the process is up.
-   Read the server logs after boot. Errors at startup are findings.
+6. **Check each part really responds** through the door a user uses (see
+   the table in `uf-patterns`). For example: the entry page loads in a real
+   browser without errors; an endpoint answers; the CLI's `--help` and one
+   real command run; the installed library imports and runs its README
+   example; the app opens its first screen; the MCP server lists its tools;
+   every worker process is up. Read the logs after start. Errors at
+   startup are findings.
 7. **Find or make a reset.** Flows change data, and a flow run on another
    flow's leftovers fails for the wrong reason. Find the command that puts
    data back to a known state (re-seed, test database, transaction
    rollback). If there is none, say so, log a tool gap, and plan for each
    test to create its own fresh user and data.
-8. **Check your own tools.** Prove each one works against the running
-   product, not just that it is installed:
-   - a way to drive a browser (and take a screenshot),
-   - a way to make HTTP calls,
-   - a way to read the database without writing,
-   - a way to call MCP tools, if the product has any,
-   - a way to read server logs.
+8. **Check your own tools.** You need a way to act through the user's door,
+   to see what the user sees (screen, output, response), to read saved data
+   without writing, and to read logs. Pick tools that fit this product and
+   prove each one works against it, not just that it is installed. Prefer
+   the project's own language and test runner when they can do the job.
    Each one you lack goes in `.userflow/tool-gaps.md` with what it will stop
-   you from checking.
-   If the project has no browser test tool, add one now (Playwright as a
-   dev dependency; keep its config and output inside `userflow-tests/`).
-   That is test tooling, not a product change. If its bundled browser does
-   not match what is on the machine, drive an installed browser (for
-   Playwright, `channel: 'chrome'`) before downloading anything.
+   you from checking. Adding test tooling (kept inside `userflow-tests/`)
+   is not a product change.
 9. **Note what users need that you may not have:** test accounts for each
    role, email or SMS you cannot receive, third-party logins, payment test
    keys. List them now so later phases can mark those flows `blocked`

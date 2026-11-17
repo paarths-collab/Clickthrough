@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Settings - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <h1>Settings</h1>
+  <form id="form">
+    <label for="company">Company name</label>
+    <input type="text" id="company">
+    <label for="days">Close pending tickets automatically after this many days without activity</label>
+    <input type="number" id="days" min="1" max="365">
+    <label class="inline"><input type="checkbox" id="notify"> Email customers when an agent replies</label>
+    <div><button type="submit">Save settings</button></div>
+  </form>
+  <p id="msg" class="msg"></p>
+</main>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  await boot(['agent', 'admin']);
+  const res = await api('GET', '/api/settings');
+  $('company').value = res.data.company_name;
+  $('days').value = res.data.auto_close_days;
+  $('notify').checked = res.data.notify_customer_on_reply;
+
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const save = await api('PUT', '/api/settings', {
+      company_name: $('company').value,
+      auto_close_days: Number($('days').value),
+      notify_customer_on_reply: $('notify').checked,
+    });
+    if (!save.ok) return say('msg', save.data.error || 'Could not save settings.', 'error');
+    say('msg', 'Settings saved.', 'ok');
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Contact us - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body class="plain">
+<main>
+  <h1>Contact us</h1>
+  <p>No account needed. We will reply by email.</p>
+  <form id="form">
+    <label for="name">Your name</label>
+    <input type="text" id="name">
+    <label for="email">Email</label>
+    <input type="text" id="email">
+    <label for="subject">Subject</label>
+    <input type="text" id="subject">
+    <label for="message">How can we help?</label>
+    <textarea id="message"></textarea>
+    <button type="submit">Send</button>
+  </form>
+  <p id="msg" class="msg"></p>
+  <p><a href="/">Back to log in</a></p>
+</main>
+<script src="/app.js"></script>
+<script>
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const res = await api('POST', '/api/contact', {
+    name: $('name').value, email: $('email').value, subject: $('subject').value, message: $('message').value,
+  });
+  if (!res.ok) return say('msg', res.data.error || 'Could not send your message.', 'error');
+  $('form').reset();
+  say('msg', `Thanks! We have your request (reference #${res.data.id}) and will reply by email.`, 'ok');
+});
+</script>
+</body>
+</html>

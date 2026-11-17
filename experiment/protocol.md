@@ -5,8 +5,15 @@ broken for users than the same agent without it?
 
 ## What you need
 
-- **A project with known breakages.** Start with `sample-app/` in this
-  repo, which has ten planted bugs listed in `experiment/answer-key/`.
+- **A project with known breakages.** Two are in this repo, each with an
+  answer key in `experiment/answer-key/`:
+  - `sample-app/` (Tasklet): ten planted bugs, one process. Easy. Use it to
+    check the pack runs at all.
+  - `sample-app-hard/` (Helpline): 25 planted bugs in four tiers, with
+    three roles, a background worker, email and an MCP server. Use it for
+    the before/after comparison; the easy app is too small to separate a
+    good run from a lucky one. Score recall per tier.
+
   Then repeat on one of your own projects, which is the test that counts.
 - **Ground truth, written first.** For your own project: use the product
   yourself for 30 minutes and list every real breakage *before* reading

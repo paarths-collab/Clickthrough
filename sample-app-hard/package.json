@@ -1,0 +1,16 @@
+{
+  "name": "helpline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Helpline - a shared support inbox for small teams",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning dev.js",
+    "web": "node --disable-warning=ExperimentalWarning server.js",
+    "worker": "node --disable-warning=ExperimentalWarning worker.js",
+    "mcp": "node --disable-warning=ExperimentalWarning mcp-server.js",
+    "seed": "node --disable-warning=ExperimentalWarning seed.js",
+    "reset": "node --disable-warning=ExperimentalWarning seed.js",
+    "test": "node --disable-warning=ExperimentalWarning --test tests/*.test.js"
+  }
+}

@@ -1,0 +1,3736 @@
+# User-flow registry. Single source of truth for what a user can do with this
+# product and whether it has been shown to work. Check it with:
+#   python3 .userflow/bin/uf-check.py --stage discover|flows|test|evaluate
+# (no --stage runs every check). Paths in this file are relative to the
+# project root.
+# Written by the evaluator with userflow-tests/.results/build_registry.py.
+version: 1
+product:
+  name: Helpline
+  purpose: Helpline is a shared support inbox for a small company. Customers send in problems (through a contact form without an account, or as tickets in a small
+    portal) and follow the conversation; agents answer tickets from a shared inbox, add internal notes, change status, priority and assignment, and use canned replies
+    and bulk actions; admins also invite and deactivate teammates, change settings, manage canned replies and export all tickets as CSV; an AI assistant can work
+    the same inbox for one agent through an MCP server. A background worker sends email (shown on a development page instead of really sent) and closes pending tickets
+    that have had no activity for a set number of days.
+  intent_sources:
+  - PRD.md
+  - README.md
+  - the product's own UI text and email text
+run:
+  install: 'none needed for the product (README: ''No packages to install''). Test tooling: npm i -D @playwright/test @modelcontextprotocol/sdk'
+  boot: 'PORT=4290 npm start   # runs dev.js: web (server.js) + worker (worker.js). README default port 4280 was taken on this machine'
+  seed: PORT=4290 npm run seed
+  reset: 'PORT=4290 npm run reset   # same as seed; safe while the app is up. Every flow test runs it first'
+  stop: stop the process started by boot (SIGTERM to dev.js stops web and worker)
+  base_url: http://localhost:4290
+  test_command: PORT=4290 npx playwright test -c userflow-tests/playwright.config.js
+  services:
+  - name: web
+    check: GET /health -> 200 {"ok":true}; entry page / loads in Chrome
+    logs: userflow-tests/.results/logs/server.log
+  - name: worker
+    check: process `node worker.js` is up; log line 'Helpline worker running'; queued mail gets sent_at within ~2 s
+    logs: userflow-tests/.results/logs/server.log
+  - name: database
+    check: SQLite file helpline.db opened read-only with node:sqlite; seed rows present (5 users, 32 tickets)
+    logs: none
+  - name: mcp
+    check: HELPLINE_TOKEN=<agent token> PORT=4290 npm run mcp; official MCP client connects over stdio and lists tools
+    logs: stderr of the mcp process
+  stubs: []
+personas:
+- id: P1
+  name: Visitor
+  goal: Get help or get an account without having one yet
+  auth: none (logged out)
+- id: P2
+  name: Customer
+  goal: Send problems in and follow them
+  auth: dana@customer.test or eli@customer.test / helpline123 (seeded), or sign up
+- id: P3
+  name: Agent
+  goal: Answer tickets from the shared inbox
+  auth: alice@helpline.test or bob@helpline.test / helpline123 (seeded)
+- id: P4
+  name: Admin
+  goal: Run the team and the settings (and work tickets like an agent)
+  auth: mira@helpline.test / helpline123 (seeded)
+- id: P5
+  name: AI assistant
+  goal: Work the inbox for one agent through the MCP server
+  auth: 'HELPLINE_TOKEN = that agent''s API token (API token page; seeded alice: hl_agent_alice_8e3b6a1d0c)'
+areas:
+- id: A1
+  name: Accounts and access
+  status: mapped
+- id: A2
+  name: Customer portal and contact form
+  status: mapped
+- id: A3
+  name: Agent dashboard, inbox and ticket
+  status: mapped
+- id: A4
+  name: 'Admin: team, settings, canned replies, export'
+  status: mapped
+- id: A5
+  name: Email and background worker
+  status: mapped
+- id: A6
+  name: MCP server
+  status: mapped
+surfaces:
+- id: S001
+  area: A1
+  type: page
+  name: Login page
+  location: /
+  source: both
+  personas: &id001
+  - P1
+  - P2
+  - P3
+  - P4
+  reach: entry page (the address of the product)
+- id: S002
+  area: A1
+  type: form
+  name: Log in form (Email, Password, Log in)
+  location: /
+  source: both
+  personas: *id001
+  reach: on the login page
+- id: S003
+  area: A1
+  type: message
+  name: '''Wrong email or password.'''
+  location: /
+  source: both
+  personas: *id001
+- id: S004
+  area: A1
+  type: action
+  name: '''Forgot password?'' link'
+  location: /
+  source: both
+  personas: *id001
+  reach: on the login page
+- id: S005
+  area: A1
+  type: page
+  name: Forgot password page
+  location: /forgot.html
+  source: both
+  personas: *id001
+  reach: login page > Forgot password?
+- id: S006
+  area: A1
+  type: form
+  name: Forgot password form (Email, Send reset link)
+  location: /forgot.html
+  source: both
+  personas: *id001
+  reach: on the forgot password page
+- id: S007
+  area: A1
+  type: message
+  name: '''If that address has an account, a reset link is on its way.'''
+  location: /forgot.html
+  source: both
+  personas: *id001
+- id: S008
+  area: A5
+  type: notification
+  name: 'Email: ''Reset your Helpline password'' with a link'
+  location: outbox / /dev/mail
+  source: both
+  personas: *id001
+- id: S009
+  area: A1
+  type: page
+  name: Choose a new password page
+  location: /reset.html?token=...
+  source: both
+  personas: *id001
+  reach: link in the reset email
+- id: S010
+  area: A1
+  type: form
+  name: New password form (New password, Save new password)
+  location: /reset.html
+  source: both
+  personas: *id001
+  reach: on the page the reset email link opens
+- id: S011
+  area: A1
+  type: message
+  name: '''This link is invalid or has expired.'''
+  location: /reset.html
+  source: both
+  personas: *id001
+- id: S012
+  area: A1
+  type: page
+  name: Create a customer account page
+  location: /signup.html
+  source: both
+  personas:
+  - P1
+  reach: login page > Create a customer account
+- id: S013
+  area: A1
+  type: form
+  name: Sign-up form (Your name, Email, Password, Create account)
+  location: /signup.html
+  source: both
+  personas:
+  - P1
+  reach: on the sign-up page
+- id: S014
+  area: A1
+  type: message
+  name: Sign-up errors ('Name is required.', 'Enter a valid email address.', 'Password must be at least 8 characters.', 'That email is already registered.')
+  location: /signup.html
+  source: both
+  personas:
+  - P1
+- id: S015
+  area: A1
+  type: action
+  name: '''Log out'' button in the sidebar'
+  location: every logged-in page
+  source: both
+  personas:
+  - P2
+  - P3
+  - P4
+  reach: sidebar > Log out
+- id: S016
+  area: A1
+  type: message
+  name: '''This account has been deactivated.'' on login'
+  location: /
+  source: both
+  personas: &id002
+  - P3
+  - P4
+- id: S017
+  area: A1
+  type: message
+  name: '''No access - You do not have access to this page.'''
+  location: any page opened by the wrong role
+  source: both
+  personas:
+  - P2
+  - P3
+- id: S018
+  area: A1
+  type: message
+  name: '''Signed in as <name> <role>'' line in the sidebar'
+  location: every logged-in page
+  source: both
+  personas:
+  - P2
+  - P3
+  - P4
+- id: S020
+  area: A2
+  type: page
+  name: Contact us page
+  location: /contact.html
+  source: both
+  personas:
+  - P1
+  reach: login page > Contact us without an account
+- id: S021
+  area: A2
+  type: form
+  name: Contact form (Your name, Email, Subject, How can we help?, Send)
+  location: /contact.html
+  source: both
+  personas:
+  - P1
+  reach: on the contact page
+- id: S022
+  area: A2
+  type: message
+  name: '''Thanks! We have your request (reference #N) and will reply by email.'''
+  location: /contact.html
+  source: both
+  personas:
+  - P1
+- id: S023
+  area: A2
+  type: message
+  name: 'Contact form: told the email address does not look valid'
+  location: /contact.html
+  source: intent
+  personas:
+  - P1
+  note: PRD 3 promises it. No such message was seen on the page and none found in the contact route in code; the flow decides.
+- id: S024
+  area: A5
+  type: notification
+  name: 'Email: ''We received your request'' confirmation to the visitor'
+  location: outbox / /dev/mail
+  source: both
+  personas:
+  - P1
+- id: S025
+  area: A2
+  type: nav
+  name: 'Customer sidebar: My tickets'
+  location: sidebar
+  source: both
+  personas:
+  - P2
+  leads_to: S026
+- id: S026
+  area: A2
+  type: page
+  name: My tickets (portal)
+  location: /portal.html
+  source: both
+  personas:
+  - P2
+  reach: customer lands here after login; sidebar > My tickets
+- id: S027
+  area: A2
+  type: nav
+  name: 'Customer sidebar: New ticket'
+  location: sidebar
+  source: both
+  personas:
+  - P2
+  leads_to: S029
+- id: S028
+  area: A2
+  type: nav
+  name: 'Customer sidebar: Help centre'
+  location: sidebar
+  source: code
+  personas:
+  - P2
+  leads_to: nowhere
+  note: Opens /help.html which answers 404 'Not found'. PRD never mentions a help centre; looks unfinished.
+- id: S029
+  area: A2
+  type: page
+  name: New ticket page
+  location: /new-ticket.html
+  source: both
+  personas:
+  - P2
+  reach: sidebar > New ticket; My tickets > Open a new ticket
+- id: S030
+  area: A2
+  type: form
+  name: New ticket form (Subject, What is the problem?, How urgent is it?, Send ticket)
+  location: /new-ticket.html
+  source: both
+  personas:
+  - P2
+  reach: on the new ticket page
+- id: S031
+  area: A2
+  type: action
+  name: '''Open a new ticket'' button on My tickets'
+  location: /portal.html
+  source: both
+  personas:
+  - P2
+  reach: My tickets > Open a new ticket
+- id: S032
+  area: A2
+  type: empty_state
+  name: '''You have no tickets yet. Open one and we will get back to you.'''
+  location: /portal.html
+  source: both
+  personas:
+  - P2
+- id: S033
+  area: A2
+  type: page
+  name: Customer ticket page (conversation)
+  location: /portal-ticket.html?id=N
+  source: both
+  personas:
+  - P2
+  reach: My tickets > click a subject
+- id: S034
+  area: A2
+  type: form
+  name: Customer reply form (Reply, Send reply)
+  location: /portal-ticket.html
+  source: both
+  personas:
+  - P2
+  reach: on the customer ticket page
+- id: S035
+  area: A2
+  type: action
+  name: '''Close ticket'' button'
+  location: /portal-ticket.html
+  source: both
+  personas:
+  - P2
+  reach: on the customer ticket page (open tickets)
+- id: S036
+  area: A2
+  type: message
+  name: '''This ticket is closed. Replying will reopen it.'''
+  location: /portal-ticket.html
+  source: both
+  personas:
+  - P2
+- id: S037
+  area: A2
+  type: message
+  name: '''We could not find that ticket'''
+  location: /portal-ticket.html
+  source: both
+  personas:
+  - P2
+- id: S038
+  area: A2
+  type: message
+  name: New ticket and reply errors ('Subject is required.', 'Please describe the problem.', 'Write a message first.')
+  location: /new-ticket.html, ticket pages
+  source: both
+  personas:
+  - P2
+  - P3
+- id: S039
+  area: A2
+  type: data
+  name: 'Stored data: users, sessions, tickets, messages, invites, resets, canned, settings, outbox'
+  location: SQLite helpline.db
+  source: both
+  personas:
+  - P2
+  - P3
+  - P4
+- id: S040
+  area: A3
+  type: nav
+  name: 'Staff sidebar: Dashboard'
+  location: sidebar
+  source: both
+  personas: *id002
+  leads_to: S041
+- id: S041
+  area: A3
+  type: page
+  name: Dashboard
+  location: /dashboard.html
+  source: both
+  personas: *id002
+  reach: staff land here after login; sidebar > Dashboard
+- id: S042
+  area: A3
+  type: action
+  name: 'Dashboard number: Open tickets (links to inbox)'
+  location: /dashboard.html
+  source: both
+  personas: *id002
+  reach: on the dashboard
+- id: S043
+  area: A3
+  type: action
+  name: 'Dashboard number: Unassigned (links to inbox)'
+  location: /dashboard.html
+  source: both
+  personas: *id002
+  reach: on the dashboard
+- id: S044
+  area: A3
+  type: action
+  name: 'Dashboard number: Assigned to me (links to inbox)'
+  location: /dashboard.html
+  source: both
+  personas: *id002
+  reach: on the dashboard
+- id: S045
+  area: A3
+  type: action
+  name: 'Dashboard number: Closed this week (links to inbox)'
+  location: /dashboard.html
+  source: both
+  personas: *id002
+  reach: on the dashboard
+- id: S046
+  area: A3
+  type: action
+  name: Dashboard 'My open tickets' list (subject links)
+  location: /dashboard.html
+  source: code
+  personas: *id002
+  reach: on the dashboard
+  note: Not in the PRD; an ordinary shortcut to my tickets. Second route to the ticket page.
+- id: S047
+  area: A3
+  type: empty_state
+  name: '''Nothing assigned to you. Pick something up from the inbox.'''
+  location: /dashboard.html
+  source: both
+  personas: *id002
+- id: S048
+  area: A3
+  type: nav
+  name: 'Staff sidebar: Inbox'
+  location: sidebar
+  source: both
+  personas: *id002
+  leads_to: S049
+- id: S049
+  area: A3
+  type: page
+  name: Inbox
+  location: /inbox.html
+  source: both
+  personas: *id002
+  reach: sidebar > Inbox; dashboard numbers
+- id: S050
+  area: A3
+  type: form
+  name: Inbox filters (Status, Assigned to, Search, Apply)
+  location: /inbox.html
+  source: both
+  personas: *id002
+  reach: on the inbox
+- id: S051
+  area: A3
+  type: action
+  name: Inbox pager (Previous, Page x of y, Next)
+  location: /inbox.html
+  source: both
+  personas: *id002
+  reach: under the inbox list
+- id: S052
+  area: A3
+  type: action
+  name: Inbox tick boxes + 'Close selected'
+  location: /inbox.html
+  source: both
+  personas: *id002
+  reach: under the inbox list
+- id: S053
+  area: A3
+  type: action
+  name: Inbox tick boxes + 'Assign selected to me'
+  location: /inbox.html
+  source: both
+  personas: *id002
+  reach: under the inbox list
+- id: S054
+  area: A3
+  type: empty_state
+  name: '''No tickets here.'''
+  location: /inbox.html
+  source: both
+  personas: *id002
+- id: S055
+  area: A3
+  type: message
+  name: '''Select at least one ticket first.'''
+  location: /inbox.html
+  source: both
+  personas: *id002
+- id: S056
+  area: A3
+  type: page
+  name: Agent ticket page
+  location: /ticket.html?id=N
+  source: both
+  personas: *id002
+  reach: Inbox > click a subject; Dashboard > My open tickets > click a subject
+- id: S057
+  area: A3
+  type: form
+  name: Agent reply form (Reply, Internal note tick box, Send)
+  location: /ticket.html
+  source: both
+  personas: *id002
+  reach: on the agent ticket page
+- id: S058
+  area: A3
+  type: action
+  name: '''Send and close'' button'
+  location: /ticket.html
+  source: both
+  personas: *id002
+  reach: on the agent ticket page
+- id: S059
+  area: A3
+  type: action
+  name: Status select (Open, Pending, Closed)
+  location: /ticket.html
+  source: both
+  personas: *id002
+  reach: on the agent ticket page
+- id: S060
+  area: A3
+  type: action
+  name: Priority select (Low, Normal, High, Urgent)
+  location: /ticket.html
+  source: both
+  personas: *id002
+  reach: on the agent ticket page
+- id: S061
+  area: A3
+  type: action
+  name: Assigned to select (Unassigned + active staff)
+  location: /ticket.html
+  source: both
+  personas: *id002
+  reach: on the agent ticket page
+- id: S062
+  area: A3
+  type: action
+  name: '''Insert a canned reply'' select'
+  location: /ticket.html
+  source: both
+  personas: *id002
+  reach: on the agent ticket page
+- id: S063
+  area: A3
+  type: nav
+  name: 'Staff sidebar: Canned replies'
+  location: sidebar
+  source: both
+  personas: *id002
+  leads_to: S064
+- id: S064
+  area: A3
+  type: page
+  name: Canned replies page (list)
+  location: /canned.html
+  source: both
+  personas: *id002
+  reach: sidebar > Canned replies
+- id: S065
+  area: A3
+  type: nav
+  name: 'Staff sidebar: API token'
+  location: sidebar
+  source: both
+  personas: *id002
+  leads_to: S066
+- id: S066
+  area: A3
+  type: page
+  name: API token page (token + how to connect an assistant)
+  location: /token.html
+  source: both
+  personas: *id002
+  reach: sidebar > API token
+- id: S067
+  area: A3
+  type: message
+  name: Ticket page confirmations ('Reply sent to the customer.', 'Internal note added.', 'Status saved.', 'Priority saved.', 'Assignment saved.', 'Reply sent to
+    the customer and ticket closed.')
+  location: /ticket.html
+  source: both
+  personas: *id002
+- id: S070
+  area: A4
+  type: nav
+  name: 'Admin sidebar: Team'
+  location: sidebar
+  source: both
+  personas:
+  - P4
+  leads_to: S071
+- id: S071
+  area: A4
+  type: page
+  name: Team page (members, pending invitations)
+  location: /team.html
+  source: both
+  personas:
+  - P4
+  reach: sidebar > Team
+- id: S072
+  area: A4
+  type: form
+  name: Invite form (Email, Role Agent|Admin, Send invitation)
+  location: /team.html
+  source: both
+  personas:
+  - P4
+  reach: on the team page
+- id: S073
+  area: A4
+  type: action
+  name: '''Deactivate'' button per teammate'
+  location: /team.html
+  source: both
+  personas:
+  - P4
+  reach: on the team page
+- id: S074
+  area: A4
+  type: action
+  name: '''Resend invite'' button per pending invitation'
+  location: /team.html
+  source: both
+  personas:
+  - P4
+  reach: on the team page, once an invitation is pending
+- id: S075
+  area: A5
+  type: notification
+  name: 'Email: ''<admin> invited you to <company>'' with an accept link'
+  location: outbox / /dev/mail
+  source: both
+  personas:
+  - P4
+- id: S076
+  area: A4
+  type: page
+  name: Join the support team page
+  location: /accept.html?token=...
+  source: both
+  personas:
+  - P1
+  reach: link in the invitation email
+- id: S077
+  area: A4
+  type: form
+  name: Join form (Your name, Choose a password, Join)
+  location: /accept.html
+  source: both
+  personas:
+  - P1
+  reach: on the page the invitation link opens
+- id: S078
+  area: A4
+  type: nav
+  name: 'Admin sidebar: Settings'
+  location: sidebar
+  source: both
+  personas:
+  - P4
+  leads_to: S079
+- id: S079
+  area: A4
+  type: page
+  name: Settings page
+  location: /settings.html
+  source: both
+  personas:
+  - P4
+  reach: sidebar > Settings
+- id: S080
+  area: A4
+  type: form
+  name: Settings form (Company name, auto-close days, Email customers when an agent replies, Save settings)
+  location: /settings.html
+  source: both
+  personas:
+  - P4
+  reach: on the settings page
+- id: S081
+  area: A4
+  type: nav
+  name: 'Admin sidebar: Export tickets'
+  location: sidebar
+  source: both
+  personas:
+  - P4
+  leads_to: S082
+- id: S082
+  area: A4
+  type: endpoint
+  name: CSV export of every ticket (download tickets.csv)
+  location: /api/export.csv
+  source: both
+  personas:
+  - P4
+- id: S083
+  area: A4
+  type: form
+  name: Canned reply form for admins (Title, Text, Save, Cancel)
+  location: /canned.html
+  source: both
+  personas:
+  - P4
+  reach: sidebar > Canned replies (admin only)
+- id: S084
+  area: A4
+  type: action
+  name: Canned reply 'Edit' and 'Delete' buttons (admin only)
+  location: /canned.html
+  source: both
+  personas:
+  - P4
+  reach: sidebar > Canned replies (admin only)
+- id: S085
+  area: A4
+  type: empty_state
+  name: '''No canned replies yet.'''
+  location: /canned.html
+  source: both
+  personas:
+  - P4
+- id: S086
+  area: A4
+  type: empty_state
+  name: '''No pending invitations.'''
+  location: /team.html
+  source: both
+  personas:
+  - P4
+- id: S087
+  area: A4
+  type: message
+  name: Team and settings messages ('Invitation sent.', 'Team member deactivated. Their tickets are back in Unassigned.', 'Settings saved.', invite and settings errors)
+  location: /team.html, /settings.html
+  source: both
+  personas:
+  - P4
+- id: S090
+  area: A5
+  type: job
+  name: 'Worker: sends queued email (every 1.5 s)'
+  location: worker.js
+  source: both
+  personas: *id001
+- id: S091
+  area: A5
+  type: job
+  name: 'Worker: closes pending tickets with no activity for the days in Settings'
+  location: worker.js
+  source: both
+  personas:
+  - P2
+  - P4
+- id: S092
+  area: A5
+  type: notification
+  name: 'Email to customer: ''New reply on "<subject>"'''
+  location: outbox / /dev/mail
+  source: both
+  personas:
+  - P2
+- id: S093
+  area: A5
+  type: notification
+  name: 'Email to customer: ''Your ticket was closed'''
+  location: outbox / /dev/mail
+  source: both
+  personas:
+  - P2
+- id: S094
+  area: A5
+  type: notification
+  name: 'Email to agent: ''Ticket assigned to you'''
+  location: outbox / /dev/mail
+  source: both
+  personas:
+  - P3
+- id: S095
+  area: A5
+  type: notification
+  name: 'Email to assignee: ''Customer replied on "<subject>"'''
+  location: outbox / /dev/mail
+  source: code
+  personas:
+  - P3
+  note: Sent by the product, not promised in the PRD. Looks intended, just undocumented.
+- id: S096
+  area: A5
+  type: notification
+  name: Email to customer when a pending ticket is closed automatically
+  location: outbox / /dev/mail
+  source: both
+  personas:
+  - P2
+- id: S097
+  area: A5
+  type: page
+  name: Development 'Sent mail' page
+  location: /dev/mail
+  source: both
+  personas: *id001
+  reach: no link in the product; README gives the address (development stand-in for a mailbox)
+  excluded: development stand-in for the user's mailbox, not a product screen; the flows use it to read mail and open emailed links
+- id: S098
+  area: A5
+  type: endpoint
+  name: Health check
+  location: /health
+  source: code
+  personas: *id001
+  excluded: health check, not for users
+- id: S099
+  area: A5
+  type: endpoint
+  name: JSON API under /api/ used by the pages
+  location: /api/*
+  source: code
+  personas: *id001
+  excluded: not offered to users as a public API; exercised through the pages. Typed directly only in not_allowed flows
+- id: S100
+  area: A6
+  type: cli
+  name: 'Start the MCP server: HELPLINE_TOKEN=<token> npm run mcp'
+  location: mcp-server.js (stdio)
+  source: both
+  personas:
+  - P5
+- id: S101
+  area: A6
+  type: mcp_tool
+  name: list_tickets (optional status, assignee_email)
+  location: MCP
+  source: both
+  personas:
+  - P5
+- id: S102
+  area: A6
+  type: mcp_tool
+  name: get_ticket
+  location: MCP
+  source: both
+  personas:
+  - P5
+- id: S103
+  area: A6
+  type: mcp_tool
+  name: search_tickets
+  location: MCP
+  source: intent
+  personas:
+  - P5
+  note: PRD 20 and the API token page both list it. The server's tool list does not have it.
+- id: S104
+  area: A6
+  type: mcp_tool
+  name: create_ticket
+  location: MCP
+  source: both
+  personas:
+  - P5
+- id: S105
+  area: A6
+  type: mcp_tool
+  name: 'add_reply (internal: true = internal note)'
+  location: MCP
+  source: both
+  personas:
+  - P5
+- id: S106
+  area: A6
+  type: mcp_tool
+  name: set_status
+  location: MCP
+  source: both
+  personas:
+  - P5
+- id: S107
+  area: A6
+  type: mcp_tool
+  name: assign_ticket
+  location: MCP
+  source: both
+  personas:
+  - P5
+goals:
+- id: G01
+  title: Create a customer account
+  persona: P1
+- id: G02
+  title: Log in and log out
+  persona: P2
+- id: G03
+  title: Get back in after forgetting my password
+  persona: P2
+- id: G04
+  title: Send a request without an account
+  persona: P1
+- id: G05
+  title: Open a ticket
+  persona: P2
+- id: G06
+  title: Follow my tickets and reply, and nobody else's
+  persona: P2
+- id: G07
+  title: Close my ticket, and reopen it by replying
+  persona: P2
+- id: G08
+  title: See at a glance what needs doing (dashboard)
+  persona: P3
+- id: G09
+  title: Find tickets in the inbox
+  persona: P3
+- id: G10
+  title: 'Work a ticket: reply, note, status, priority, assign'
+  persona: P3
+- id: G11
+  title: Change several tickets at once
+  persona: P3
+- id: G12
+  title: Pending tickets close themselves
+  persona: P4
+- id: G13
+  title: Use canned replies
+  persona: P3
+- id: G14
+  title: Connect an AI assistant with my API token
+  persona: P3
+- id: G15
+  title: Invite a teammate
+  persona: P4
+- id: G16
+  title: Deactivate a teammate
+  persona: P4
+- id: G17
+  title: Change the settings (admins only)
+  persona: P4
+- id: G18
+  title: Manage canned replies
+  persona: P4
+- id: G19
+  title: Export every ticket as CSV (admins only)
+  persona: P4
+- id: G20
+  title: AI assistant reads the inbox
+  persona: P5
+- id: G21
+  title: AI assistant opens a ticket for a customer
+  persona: P5
+- id: G22
+  title: AI assistant replies or leaves an internal note
+  persona: P5
+- id: G23
+  title: AI assistant changes status and assignment
+  persona: P5
+- id: G24
+  title: Read help articles (Help centre)
+  persona: P2
+flows:
+- id: F001
+  goal: G01
+  route: sign-up page
+  title: Visitor creates a customer account and lands in the portal logged in
+  persona: P1
+  priority: P0
+  variant: normal
+  surfaces:
+  - S001
+  - S012
+  - S013
+  - S018
+  - S026
+  - S032
+  - S015
+  - S039
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Click 'Create a customer account'
+    see: Sign-up page
+  - do: Type name 'Nora Quist', email nora@new.test, a password, click 'Create account'
+    see: My tickets page, 'Signed in as Nora Quist', 'You have no tickets yet.'
+  - do: Click 'Log out', then log in again with the same email and password
+    see: My tickets page again, signed in as Nora Quist
+  persisted:
+  - users row nora@new.test with role customer and a password
+  side_effects: []
+  test_file: userflow-tests/F001-signup.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F001/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F001/final.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F001/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F001/sheet.png
+- id: F002
+  goal: G01
+  route: sign-up page
+  title: Visitor is told what is wrong with a bad sign-up
+  persona: P1
+  priority: P1
+  variant: wrong_input
+  surfaces:
+  - S012
+  - S013
+  - S014
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Open sign-up, submit with an empty name
+    see: '''Name is required.'''
+  - do: Submit with email 'nora-at-new'
+    see: '''Enter a valid email address.'''
+  - do: Submit with password 'short'
+    see: '''Password must be at least 8 characters.'''
+  - do: Submit with dana@customer.test (already registered)
+    see: '''That email is already registered.'''
+  persisted:
+  - no new users row
+  side_effects: []
+  test_file: userflow-tests/F002-signup-wrong-input.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F002/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F002/final.png
+- id: F003
+  goal: G02
+  route: customer
+  title: Customer logs in, sees their portal, logs out and is really out
+  persona: P2
+  priority: P0
+  variant: normal
+  surfaces:
+  - S001
+  - S002
+  - S018
+  - S025
+  - S026
+  - S015
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Type dana@customer.test and the password, click 'Log in'
+    see: My tickets, 'Signed in as Dana Whitfield', her tickets listed
+  - do: Click 'My tickets' in the sidebar
+    see: My tickets page
+  - do: Click 'Log out'
+    see: Login page
+  - do: Press the browser's back button / open My tickets again
+    see: Sent back to the login page, no tickets shown
+  persisted:
+  - session removed on log out
+  side_effects: []
+  test_file: userflow-tests/F003-customer-login-logout.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: After Log out, pressing Back shows the portal again saying 'Signed in as Dana Whitfield' with 'You have no tickets yet' (session is really ended and no
+    ticket is shown; a reload goes to the login page). Sidebar was drawn from a cached /api/me answer.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F003/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F003/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F003/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F003/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F003/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F003/sheet.png
+- id: F004
+  goal: G02
+  route: staff
+  title: Agent and admin log in and each sees their own menu
+  persona: P3
+  priority: P0
+  variant: normal
+  surfaces:
+  - S001
+  - S002
+  - S018
+  - S040
+  - S041
+  - S015
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice@helpline.test
+    see: 'Dashboard ''Good to see you, Alice''; sidebar: Dashboard, Inbox, Canned replies, API token; no Team/Settings/Export'
+  - do: Click 'Dashboard' in the sidebar
+    see: Dashboard
+  - do: Log out, log in as mira@helpline.test
+    see: Dashboard 'Good to see you, Mira'; sidebar also has Team, Settings, Export tickets
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F004-staff-login.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F004/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F004/final.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F004/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F004/sheet.png
+- id: F005
+  goal: G02
+  route: customer
+  title: Wrong password is refused with a reason
+  persona: P2
+  priority: P1
+  variant: wrong_input
+  surfaces:
+  - S002
+  - S003
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Type dana@customer.test and a wrong password, click 'Log in'
+    see: '''Wrong email or password.'' and still on the login page'
+  persisted:
+  - no session created
+  side_effects: []
+  test_file: userflow-tests/F005-login-wrong-password.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F005/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F005/final.png
+- id: F006
+  goal: G02
+  route: customer
+  title: A logged-out person who opens an inside page is sent to log in
+  persona: P2
+  priority: P1
+  variant: interrupted
+  surfaces:
+  - S001
+  - S026
+  - S049
+  start: 'logged out; changes the address to /portal.html and /inbox.html (typing the address is the point: session gone)'
+  preconditions: data reset to seed
+  steps:
+  - do: Change the address to /portal.html
+    see: Login page; no ticket list
+  - do: Change the address to /inbox.html
+    see: Login page; no ticket list
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F006-logged-out-redirect.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F006/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F006/final.png
+- id: F007
+  goal: G03
+  route: forgot password link
+  title: Customer resets a forgotten password by email and logs in with the new one
+  persona: P2
+  priority: P0
+  variant: normal
+  surfaces:
+  - S004
+  - S005
+  - S006
+  - S007
+  - S008
+  - S009
+  - S010
+  - S090
+  - S002
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Click 'Forgot password?'
+    see: Forgot password page
+  - do: Type dana@customer.test, click 'Send reset link'
+    see: '''If that address has an account, a reset link is on its way.'''
+  - do: Open the email 'Reset your Helpline password' and click its link
+    see: '''Choose a new password'' page'
+  - do: Type a new password, click 'Save new password'
+    see: '''Password changed. You can log in with it now.'''
+  - do: Click 'Back to log in', log in with the new password
+    see: My tickets, signed in as Dana Whitfield
+  persisted:
+  - users.password_hash changed for dana
+  - resets row marked used
+  side_effects:
+  - reset email sent to dana@customer.test
+  test_file: userflow-tests/F007-forgot-password.test.js
+  status: fail
+  failure_class: INTEGRATION
+  finding: 'Password reset never works: the emailed link opens the page, but saving any new password says ''This link is invalid or has expired.'' (email link carries
+    ?token=, reset.html reads ?t= and sends no token).'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F007/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F007/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F007/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F007/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F007/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F007/sheet.png
+- id: F008
+  goal: G03
+  route: forgot password link
+  title: A reset link works only once
+  persona: P2
+  priority: P1
+  variant: interrupted
+  surfaces:
+  - S009
+  - S010
+  - S011
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Ask for a reset link, open it from the email, set a new password
+    see: '''Password changed.'''
+  - do: Open the same link from the email again and try to set another password
+    see: '''This link is invalid or has expired.'''
+  - do: Log in with the second password
+    see: '''Wrong email or password.'''
+  persisted:
+  - password is the first new one, not the second
+  side_effects: []
+  test_file: userflow-tests/F008-reset-link-once.test.js
+  status: fail
+  failure_class: INTEGRATION
+  finding: 'Could not get as far as using a link twice: the first use of a fresh reset link is already refused (same cause as F007).'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F008/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F008/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F008/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F008/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F008/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F008/sheet.png
+- id: F009
+  goal: G03
+  route: forgot password link
+  title: A reset link older than an hour is refused
+  persona: P2
+  priority: P2
+  variant: interrupted
+  surfaces:
+  - S009
+  - S010
+  - S011
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed; the reset request is aged to 61 minutes by script (cannot wait an hour)
+  steps:
+  - do: Ask for a reset link
+    see: '''...a reset link is on its way.'''
+  - do: 61 minutes later open the link and try to set a new password
+    see: '''This link is invalid or has expired.'''
+  - do: Log in with the old password
+    see: My tickets (old password still works)
+  persisted:
+  - password unchanged
+  side_effects: []
+  test_file: userflow-tests/F009-reset-link-expired.test.js
+  status: unverified
+  failure_class: null
+  finding: The old link was refused and the old password still works, but F007 shows every reset link is refused, fresh or old, so this run says nothing about the
+    one-hour rule.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F009/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F009/final.png
+- id: F010
+  goal: G03
+  route: forgot password link
+  title: Asking for a reset with an unknown address gives the same answer and sends nothing
+  persona: P1
+  priority: P2
+  variant: wrong_input
+  surfaces:
+  - S006
+  - S007
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Forgot password, type nobody@nowhere.test, click 'Send reset link'
+    see: '''If that address has an account, a reset link is on its way.'''
+  persisted:
+  - no resets row
+  side_effects:
+  - no email queued
+  test_file: userflow-tests/F010-forgot-unknown-email.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F010/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F010/final.png
+- id: F011
+  goal: G04
+  route: contact form
+  title: Visitor sends a request without an account; it becomes a ticket with the full message and they get a confirmation email
+  persona: P1
+  priority: P0
+  variant: normal
+  surfaces:
+  - S020
+  - S021
+  - S022
+  - S024
+  - S090
+  - S049
+  - S056
+  - S039
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Click 'Contact us without an account'
+    see: Contact us page
+  - do: Type name, email pat@visitor.test, subject 'Cannot find my invoice', a message, click 'Send'
+    see: '''Thanks! We have your request (reference #33) and will reply by email.'''
+  - do: (as agent Alice) Log in, click Inbox, click the new ticket's subject
+    see: The ticket shows the visitor's name and the full message they typed
+  - do: (visitor) look at their email
+    see: '''We received your request: "Cannot find my invoice"'' with the reference'
+  persisted:
+  - 'tickets row #33 with subject and the full message as description, customer pat@visitor.test'
+  side_effects:
+  - confirmation email to pat@visitor.test
+  test_file: userflow-tests/F011-contact-form.test.js
+  status: fail
+  failure_class: INTEGRATION
+  finding: 'Contact form: the visitor''s message is lost. The ticket is created with an empty description; the agent sees ''Pat Visitor wrote'' and nothing else (page
+    sends `message`, server reads `description`). Confirmation email is sent.'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F011/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F011/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F011/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F011/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F011/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F011/sheet.png
+- id: F012
+  goal: G04
+  route: contact form
+  title: Visitor who types an invalid email address is told so
+  persona: P1
+  priority: P1
+  variant: wrong_input
+  surfaces:
+  - S021
+  - S023
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Open the contact form, type email 'pat-at-visitor', a subject and a message, click 'Send'
+    see: A message saying the email address is not valid; no 'Thanks' message
+  persisted:
+  - no ticket and no user created
+  side_effects:
+  - no email queued to a bad address
+  test_file: userflow-tests/F012-contact-invalid-email.test.js
+  status: fail
+  failure_class: MISSING_FEATURE
+  finding: Contact form accepts 'pat-at-visitor' as an email and says 'Thanks!'; a ticket and a user are saved for it, and the confirmation mail to that address then
+    crashes the background worker (no email for anyone afterwards).
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F012/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F012/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F012/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F012/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F012/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F012/sheet.png
+- id: F013
+  goal: G04
+  route: contact form
+  title: Visitor who leaves the subject empty is told so
+  persona: P1
+  priority: P2
+  variant: wrong_input
+  surfaces:
+  - S021
+  - S038
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Open the contact form, fill everything except Subject, click 'Send'
+    see: '''Subject is required.'''
+  persisted:
+  - no ticket created
+  side_effects: []
+  test_file: userflow-tests/F013-contact-empty-subject.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F013/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F013/final.png
+- id: F014
+  goal: G04
+  route: contact form then sign-up
+  title: A visitor who used the contact form later creates an account and finds that ticket
+  persona: P1
+  priority: P1
+  variant: handoff
+  surfaces:
+  - S021
+  - S024
+  - S013
+  - S026
+  - S033
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Send a contact request as pat@visitor.test
+    see: '''Thanks!'' with a reference'
+  - do: Open the confirmation email, follow its link to create an account, sign up with the same email
+    see: My tickets lists the request they sent
+  - do: Click the ticket
+    see: Their subject and their message
+  persisted:
+  - ticket belongs to the user pat@visitor.test who now has a password
+  side_effects: []
+  test_file: userflow-tests/F014-contact-then-signup.test.js
+  status: fail
+  failure_class: INTEGRATION
+  finding: Visitor signs up after using the contact form and finds their ticket, but their own message is missing from it (same cause as F011).
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F014/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F014/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F014/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F014/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F014/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F014/sheet.png
+- id: F015
+  goal: G05
+  route: sidebar > New ticket
+  title: Customer opens a ticket with a subject, description and priority High
+  persona: P2
+  priority: P0
+  variant: normal
+  surfaces:
+  - S027
+  - S029
+  - S030
+  - S033
+  - S026
+  - S049
+  - S039
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as dana, click 'New ticket' in the sidebar
+    see: New ticket page
+  - do: Type subject and description, choose 'High', click 'Send ticket'
+    see: The new ticket's page with the subject, description, 'open' and 'high'
+  - do: Click 'My tickets'
+    see: The new ticket in the list with priority high
+  - do: (as agent Alice) open the Inbox
+    see: The new ticket is in the open list with priority high and customer Dana Whitfield
+  persisted:
+  - tickets row with this subject, description, priority high, customer dana
+  side_effects: []
+  test_file: userflow-tests/F015-new-ticket.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F015/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F015/final.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F015/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F015/sheet.png
+- id: F016
+  goal: G05
+  route: My tickets > Open a new ticket
+  title: Customer opens an Urgent ticket and it stays Urgent
+  persona: P2
+  priority: P1
+  variant: alternate
+  surfaces:
+  - S031
+  - S029
+  - S030
+  - S033
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as dana, click 'Open a new ticket' on My tickets
+    see: New ticket page
+  - do: Type subject and description, choose 'Urgent', click 'Send ticket'
+    see: The new ticket's page showing 'urgent'
+  - do: Reload
+    see: Still 'urgent'
+  persisted:
+  - tickets row with priority urgent
+  side_effects: []
+  test_file: userflow-tests/F016-new-ticket-urgent.test.js
+  status: fail
+  failure_class: INTEGRATION
+  finding: Customer chooses 'Urgent' and the ticket is saved and shown as 'normal' (form offers Urgent, server accepts only low/normal/high from customers).
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F016/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F016/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F016/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F016/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F016/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F016/sheet.png
+- id: F017
+  goal: G05
+  route: sidebar > New ticket
+  title: Customer who leaves subject or description empty is told so
+  persona: P2
+  priority: P1
+  variant: wrong_input
+  surfaces:
+  - S030
+  - S038
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: New ticket with an empty subject, click 'Send ticket'
+    see: '''Subject is required.'''
+  - do: Fill the subject, leave the description empty, click 'Send ticket'
+    see: '''Please describe the problem.'''
+  persisted:
+  - no ticket created
+  side_effects: []
+  test_file: userflow-tests/F017-new-ticket-wrong-input.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F017/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F017/final.png
+- id: F018
+  goal: G05
+  route: My tickets > Open a new ticket
+  title: A brand-new customer with no tickets opens their first one
+  persona: P2
+  priority: P1
+  variant: empty
+  surfaces:
+  - S013
+  - S032
+  - S031
+  - S030
+  - S026
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Sign up as a new customer
+    see: 'My tickets: ''You have no tickets yet. Open one and we will get back to you.'''
+  - do: Click 'Open a new ticket', fill it in, click 'Send ticket'
+    see: The new ticket's page
+  - do: Click 'My tickets'
+    see: One ticket in the list; the empty message is gone
+  persisted:
+  - one tickets row for the new customer
+  side_effects: []
+  test_file: userflow-tests/F018-first-ticket.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F018/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F018/final.png
+- id: F019
+  goal: G05
+  route: sidebar > New ticket
+  title: Double-clicking 'Send ticket' creates one ticket, not two
+  persona: P2
+  priority: P2
+  variant: interrupted
+  surfaces:
+  - S030
+  - S026
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: New ticket, fill it in, double-click 'Send ticket'
+    see: The new ticket's page
+  - do: Click 'My tickets'
+    see: The subject appears once
+  persisted:
+  - exactly one tickets row with this subject
+  side_effects: []
+  test_file: userflow-tests/F019-new-ticket-double-click.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: Double-clicking 'Send ticket' creates two identical tickets.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F019/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F019/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F019/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F019/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F019/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F019/sheet.png
+- id: F020
+  goal: G06
+  route: My tickets > ticket
+  title: Customer sees only their own tickets, opens one, reads the conversation and replies
+  persona: P2
+  priority: P0
+  variant: normal
+  surfaces:
+  - S026
+  - S033
+  - S034
+  - S095
+  - S056
+  - S039
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as dana
+    see: My tickets lists only Dana's 17 tickets; none of Eli's subjects
+  - do: Click 'Refund not received'
+    see: Her description, Alice's reply marked (support), her earlier reply
+  - do: Type a reply, click 'Send reply'
+    see: '''Reply sent.'' and the reply at the end of the conversation'
+  - do: Reload
+    see: The reply is still there
+  - do: (as agent Alice) open the ticket from the inbox
+    see: Dana's reply is in the thread
+  persisted:
+  - messages row on ticket 1 by dana, not internal
+  side_effects:
+  - '''Customer replied'' email to the assignee alice (not promised in the PRD)'
+  test_file: userflow-tests/F020-customer-reply.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F020/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F020/final.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F020/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F020/sheet.png
+- id: F021
+  goal: G06
+  route: address bar
+  title: Customer cannot open another customer's ticket by changing the number in the address
+  persona: P2
+  priority: P0
+  variant: not_allowed
+  surfaces:
+  - S033
+  - S037
+  start: login page (http://localhost:4290/), logged out; then changes the address to /portal-ticket.html?id=3 (typing the address is the point)
+  preconditions: data reset to seed; ticket 3 belongs to Eli
+  steps:
+  - do: 'Log in as dana, open her ticket #1'
+    see: Her ticket
+  - do: Change the address to /portal-ticket.html?id=3
+    see: '''We could not find that ticket''; nothing of Eli''s ticket (''Export to CSV fails'', ''Clicking the button gives a blank file.'') is shown'
+  persisted:
+  - nothing changed
+  side_effects: []
+  test_file: userflow-tests/F021-other-customers-ticket.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: 'A customer reads any other customer''s ticket by changing the number in the address: Dana opened Eli''s #3 and #7 with subject, description and a reply
+    box (server answers 200; no owner check on reading one ticket).'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F021/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F021/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F021/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F021/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F021/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F021/sheet.png
+- id: F022
+  goal: G06
+  route: My tickets > ticket
+  title: Internal notes already on a ticket are not shown to the customer
+  persona: P2
+  priority: P0
+  variant: normal
+  surfaces:
+  - S033
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed; ticket 1 has a seeded internal note ('Legacy plan. Finance says no second refund...')
+  steps:
+  - do: Log in as dana, open 'Refund not received'
+    see: The conversation without the internal note; nothing in the page or in what the page loaded contains the note text
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F022-internal-note-hidden.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F022/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F022/final.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F022/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F022/sheet.png
+- id: F023
+  goal: G06
+  route: return visit
+  title: A customer's reply is still there when they come back later
+  persona: P2
+  priority: P1
+  variant: return_visit
+  surfaces:
+  - S034
+  - S015
+  - S002
+  - S033
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as eli, open 'Export to CSV fails', send a reply, log out
+    see: Login page
+  - do: In a new browser session log in as eli and open the ticket again
+    see: The reply is there
+  persisted:
+  - messages row by eli on ticket 3
+  side_effects: []
+  test_file: userflow-tests/F023-customer-return-visit.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F023/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F023/final.png
+- id: F024
+  goal: G06
+  route: My tickets > ticket
+  title: Customer who sends an empty reply is told so
+  persona: P2
+  priority: P2
+  variant: wrong_input
+  surfaces:
+  - S034
+  - S038
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as dana, open a ticket, click 'Send reply' with nothing typed
+    see: '''Write a message first.'''
+  persisted:
+  - no messages row added
+  side_effects: []
+  test_file: userflow-tests/F024-customer-empty-reply.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F024/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F024/final.png
+- id: F025
+  goal: G07
+  route: Close ticket button
+  title: Customer closes their own ticket
+  persona: P2
+  priority: P1
+  variant: normal
+  surfaces:
+  - S035
+  - S036
+  - S026
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as dana, open 'Typo on the pricing page', click 'Close ticket'
+    see: '''Ticket closed.'', status closed, ''This ticket is closed. Replying will reopen it.'''
+  - do: Click 'My tickets'
+    see: That ticket shows closed
+  persisted:
+  - tickets row 14 status closed
+  side_effects: []
+  test_file: userflow-tests/F025-customer-close.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F025/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F025/final.png
+- id: F026
+  goal: G07
+  route: reply to a closed ticket
+  title: Replying to a closed ticket reopens it so the team sees it again
+  persona: P2
+  priority: P1
+  variant: normal
+  surfaces:
+  - S036
+  - S034
+  - S049
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed; ticket 22 'Thank you' (Dana) is closed
+  steps:
+  - do: Log in as dana, open the closed ticket 'Thank you'
+    see: '''This ticket is closed. Replying will reopen it.'''
+  - do: Type a reply, click 'Send reply'
+    see: '''Reply sent.'' and the ticket now shows open'
+  - do: (as agent Alice) open the Inbox (open tickets)
+    see: '''Thank you'' is in the open list'
+  persisted:
+  - tickets row 22 status open
+  side_effects: []
+  test_file: userflow-tests/F026-reply-reopens.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: 'Replying to a closed ticket does not reopen it: page says ''Replying will reopen it'', reply is saved, ticket stays closed and never appears in the team''s
+    open inbox.'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F026/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F026/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F026/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F026/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F026/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F026/sheet.png
+- id: F027
+  goal: G08
+  route: dashboard
+  title: Each dashboard number matches the inbox list it links to
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S041
+  - S042
+  - S043
+  - S044
+  - S045
+  - S049
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice
+    see: 'Dashboard with four numbers: Open tickets, Unassigned, Assigned to me, Closed this week'
+  - do: Click 'Open tickets'
+    see: Inbox says the same number of tickets match, all open
+  - do: Back; click 'Unassigned'
+    see: Inbox says the same number match, all open and Unassigned
+  - do: Back; click 'Assigned to me'
+    see: Inbox says the same number match, all assigned to Alice Brandt
+  - do: Back; click 'Closed this week'
+    see: Inbox says the same number match, all closed
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F027-dashboard-numbers.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: Dashboard says 9 Unassigned but the inbox list it links to has 5 (the number also counts closed tickets nobody is assigned to). The other three numbers
+    match.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F027/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F027/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F027/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F027/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F027/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F027/sheet.png
+- id: F028
+  goal: G08
+  route: dashboard
+  title: A staff member with nothing assigned sees a plain empty message
+  persona: P4
+  priority: P2
+  variant: empty
+  surfaces:
+  - S041
+  - S047
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed; Mira has no tickets assigned
+  steps:
+  - do: Log in as mira
+    see: 'Dashboard: ''Assigned to me'' is 0 and ''Nothing assigned to you. Pick something up from the inbox.'''
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F028-dashboard-empty.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F028/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F028/final.png
+- id: F029
+  goal: G09
+  route: sidebar > Inbox
+  title: Agent opens the inbox and opens a ticket from it
+  persona: P3
+  priority: P0
+  variant: normal
+  surfaces:
+  - S048
+  - S049
+  - S056
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, click 'Inbox'
+    see: 'Inbox with open tickets: subject, customer, status, priority, assignee'
+  - do: Click 'Export to CSV fails'
+    see: 'Ticket #3 with Eli Navarro''s description and the reply box'
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F029-inbox-open-ticket.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F029/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F029/final.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F029/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F029/sheet.png
+- id: F030
+  goal: G09
+  route: sidebar > Inbox
+  title: Inbox filters by status and by assignee
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S050
+  - S049
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: 'Inbox: choose Status ''Pending'', click Apply'
+    see: 3 ticket(s) match, all pending
+  - do: Choose Status 'Open', Assigned to 'Bob Tanaka', Apply
+    see: 5 ticket(s) match, all assigned to Bob Tanaka
+  - do: Choose Status 'Any status', Assigned to 'Unassigned', Apply
+    see: 9 ticket(s) match, all Unassigned
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F030-inbox-filters.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F030/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F030/final.png
+- id: F031
+  goal: G09
+  route: sidebar > Inbox
+  title: Inbox search finds words in subject and description, whatever the letter case
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S050
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: 'Inbox: Status ''Any status'', search ''Refund'', Apply'
+    see: '''Refund not received'' is listed'
+  - do: Search 'refund' (lower case), Apply
+    see: '''Refund not received'' is listed'
+  - do: Search 'authenticator' (a word only in a description), Apply
+    see: '''Two-factor codes rejected'' is listed'
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F031-inbox-search.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: 'Inbox search is case-sensitive: ''Refund'' finds the ticket, ''refund'' and ''AUTHENTICATOR'' find nothing.'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F031/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F031/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F031/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F031/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F031/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F031/sheet.png
+- id: F032
+  goal: G09
+  route: sidebar > Inbox
+  title: Inbox shows 10 tickets per page with Previous and Next
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S051
+  - S049
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed; 17 open tickets
+  steps:
+  - do: Log in as alice, click 'Inbox'
+    see: '''17 ticket(s) match.'', 10 rows, ''Page 1 of 2'', Previous disabled'
+  - do: Click 'Next'
+    see: The other 7 rows, 'Page 2 of 2', Next disabled
+  - do: Click 'Previous'
+    see: The first 10 rows again
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F032-inbox-paging.test.js
+  status: fail
+  failure_class: INTEGRATION
+  finding: 'Inbox paging is broken: all 17 open tickets are on page 1, the pager says ''Page 1 of 2'', and Next shows ''No tickets here.'' (page sends per_page=10,
+    server reads limit, default 25).'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F032/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F032/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F032/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F032/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F032/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F032/sheet.png
+- id: F033
+  goal: G09
+  route: sidebar > Inbox
+  title: A search with no match says so
+  persona: P3
+  priority: P2
+  variant: empty
+  surfaces:
+  - S050
+  - S054
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: 'Inbox: search ''zzzz-nothing'', Apply'
+    see: '''0 ticket(s) match.'' and ''No tickets here.'''
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F033-inbox-no-match.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F033/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F033/final.png
+- id: F034
+  goal: G10
+  route: Inbox > ticket
+  title: Agent replies to a customer; the customer sees it and is emailed
+  persona: P3
+  priority: P0
+  variant: normal
+  surfaces:
+  - S056
+  - S057
+  - S067
+  - S092
+  - S090
+  - S033
+  - S039
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, Inbox, open 'Export to CSV fails'
+    see: 'Ticket #3'
+  - do: Type a reply, click 'Send'
+    see: '''Reply sent to the customer.'' and the reply in the thread'
+  - do: Reload
+    see: Reply still there
+  - do: (as customer Eli) log in, open the ticket
+    see: Alice's reply marked (support)
+  - do: (Eli) look at email
+    see: '''New reply on "Export to CSV fails"'' containing the reply text'
+  persisted:
+  - messages row on ticket 3 by alice, not internal
+  side_effects:
+  - reply email to eli@customer.test
+  test_file: userflow-tests/F034-agent-reply.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F034/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F034/final.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F034/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F034/sheet.png
+- id: F035
+  goal: G10
+  route: Inbox > ticket
+  title: Agent adds an internal note; the customer never sees it, on screen or by email
+  persona: P3
+  priority: P0
+  variant: normal
+  surfaces:
+  - S057
+  - S067
+  - S033
+  - S092
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, open 'Export to CSV fails', tick 'Internal note', type a note, click 'Send'
+    see: '''Internal note added.'' and the note in the thread marked ''internal note'''
+  - do: (as customer Eli) log in, open the ticket
+    see: The note is not shown
+  - do: (Eli) look at email
+    see: No email containing the note text
+  persisted:
+  - messages row internal = 1
+  side_effects:
+  - no email to the customer
+  test_file: userflow-tests/F035-agent-internal-note.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: An internal note is emailed to the customer in full ('New reply on ...' containing the note text). It is hidden in the customer's portal, but the email
+    leaks it.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F035/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F035/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F035/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F035/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F035/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F035/sheet.png
+- id: F036
+  goal: G10
+  route: Dashboard > My open tickets
+  title: Agent opens a ticket from 'My open tickets' on the dashboard and replies
+  persona: P3
+  priority: P1
+  variant: alternate
+  surfaces:
+  - S046
+  - S056
+  - S057
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice; on the dashboard click 'Charged twice in April' under My open tickets
+    see: 'Ticket #8'
+  - do: Type a reply, click 'Send'
+    see: '''Reply sent to the customer.'' and the reply in the thread'
+  persisted:
+  - messages row on ticket 8 by alice
+  side_effects:
+  - reply email to dana@customer.test
+  test_file: userflow-tests/F036-reply-from-dashboard.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F036/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F036/final.png
+- id: F037
+  goal: G10
+  route: Inbox > ticket
+  title: Agent changes status to Pending, then Closed; customer is emailed about the close
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S059
+  - S067
+  - S093
+  - S033
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, open 'Export to CSV fails', choose Status 'Pending'
+    see: '''Status saved.'''
+  - do: Reload
+    see: Status shows Pending
+  - do: Choose Status 'Closed'
+    see: '''Status saved.'''
+  - do: (as customer Eli) open the ticket
+    see: Shows closed
+  - do: (Eli) look at email
+    see: '''Your ticket was closed: "Export to CSV fails"'''
+  persisted:
+  - tickets row 3 status closed
+  side_effects:
+  - closed email to eli@customer.test
+  test_file: userflow-tests/F037-agent-status.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F037/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F037/final.png
+- id: F038
+  goal: G10
+  route: Inbox > ticket
+  title: Agent changes the priority
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S060
+  - S067
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, open 'Export to CSV fails', choose Priority 'Urgent'
+    see: '''Priority saved.'''
+  - do: Reload, then look at the inbox row
+    see: Priority Urgent on the ticket and 'urgent' in the inbox
+  persisted:
+  - tickets row 3 priority urgent
+  side_effects: []
+  test_file: userflow-tests/F038-agent-priority.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F038/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F038/final.png
+- id: F039
+  goal: G10
+  route: Inbox > ticket
+  title: Agent assigns a ticket to another agent, who is emailed and finds it under 'Assigned to me'
+  persona: P3
+  priority: P1
+  variant: handoff
+  surfaces:
+  - S061
+  - S067
+  - S094
+  - S044
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, open 'Export to CSV fails' (Unassigned), choose Assigned to 'Bob Tanaka'
+    see: '''Assignment saved.'''
+  - do: (Bob) look at email
+    see: '''Ticket assigned to you: "Export to CSV fails"'''
+  - do: (as Bob) log in, click 'Assigned to me' on the dashboard
+    see: '''Export to CSV fails'' is in the list'
+  persisted:
+  - tickets row 3 assignee bob
+  side_effects:
+  - assignment email to bob@helpline.test
+  test_file: userflow-tests/F039-agent-assign.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F039/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F039/final.png
+- id: F040
+  goal: G10
+  route: Inbox > ticket
+  title: '''Send and close'' sends the reply, closes the ticket and emails the customer the reply'
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S058
+  - S067
+  - S092
+  - S033
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, open 'Export to CSV fails', type a reply, click 'Send and close'
+    see: '''Reply sent to the customer and ticket closed.'', status Closed, reply in the thread'
+  - do: (as customer Eli) open the ticket
+    see: The reply, and the ticket is closed
+  - do: (Eli) look at email
+    see: '''New reply on "Export to CSV fails"'' with the reply text, exactly as with Send'
+  persisted:
+  - messages row by alice; tickets row 3 status closed
+  side_effects:
+  - reply email to eli@customer.test
+  test_file: userflow-tests/F040-send-and-close.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: '''Send and close'' tells the agent ''Reply sent to the customer and ticket closed.'' but no email at all is sent to the customer (no reply email, no closed
+    email). Reply and close are saved.'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F040/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F040/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F040/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F040/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F040/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F040/sheet.png
+- id: F041
+  goal: G10
+  route: Inbox > ticket
+  title: Agent who sends an empty reply is told so
+  persona: P3
+  priority: P2
+  variant: wrong_input
+  surfaces:
+  - S057
+  - S038
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, open a ticket, click 'Send' with nothing typed
+    see: '''Write a message first.'''
+  persisted:
+  - no messages row added
+  side_effects:
+  - no email
+  test_file: userflow-tests/F041-agent-empty-reply.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F041/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F041/final.png
+- id: F042
+  goal: G10
+  route: Inbox > ticket
+  title: An internal note sent with 'Send and close' stays internal
+  persona: P3
+  priority: P1
+  variant: alternate
+  surfaces:
+  - S058
+  - S057
+  - S033
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, open 'Export to CSV fails', tick 'Internal note', type a note, click 'Send and close'
+    see: The ticket closes and the note is in the thread marked 'internal note' (or the product refuses and says why)
+  - do: (as customer Eli) open the ticket
+    see: The note text is not shown
+  persisted:
+  - no public message with the note text
+  side_effects:
+  - no email with the note text
+  test_file: userflow-tests/F042-note-send-and-close.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: 'With ''Internal note (customers never see this)'' ticked, ''Send and close'' publishes the note as a normal support reply: the customer sees it in the
+    portal.'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F042/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F042/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F042/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F042/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F042/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F042/sheet.png
+- id: F043
+  goal: G10
+  route: Inbox > ticket
+  title: Reply emails still arrive after a visitor mistyped their address on the contact form
+  persona: P3
+  priority: P1
+  variant: handoff
+  surfaces:
+  - S021
+  - S090
+  - S092
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: (a visitor) send the contact form with email 'pat@visitor' (no .com)
+    see: Either told the address is wrong, or 'Thanks!'
+  - do: (as agent Alice) reply to 'Export to CSV fails'
+    see: '''Reply sent to the customer.'''
+  - do: (as customer Eli) look at email
+    see: '''New reply on "Export to CSV fails"'' arrives'
+  persisted:
+  - messages row by alice
+  side_effects:
+  - reply email to eli@customer.test is sent (sent_at set)
+  test_file: userflow-tests/F043-mail-after-bad-address.test.js
+  status: fail
+  failure_class: SOFTWARE_BUG
+  finding: 'After one visitor sends the contact form with a mistyped address (''pat@visitor''), the background worker crashes and no email reaches anyone: Eli''s
+    reply mail stays queued. Restarting the worker crashes it again each time while that mail is in the queue.'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F043/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F043/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F043/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F043/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F043/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F043/sheet.png
+- id: F044
+  goal: G11
+  route: Inbox > Close selected
+  title: Agent ticks two tickets and closes only those
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S052
+  - S049
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, Inbox, tick 'Export to CSV fails' (#3) and 'Wrong time zone on reports' (#6), click 'Close selected'
+    see: '''2 ticket(s) closed.'' and both leave the open list'
+  - do: Choose Status 'Closed', Apply
+    see: '#3 and #6 are closed'
+  - do: Choose Status 'Open', Apply
+    see: '15 ticket(s) match: every other open ticket is still open'
+  persisted:
+  - tickets 3 and 6 closed; no other ticket changed
+  side_effects: []
+  test_file: userflow-tests/F044-bulk-close.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: '''Close selected'' closes the wrong tickets: ticked #3 and #6, was told ''2 ticket(s) closed.'', but #1 (never ticked) was closed and #3 and #6 stayed
+    open (server loops over list positions, not the ticket numbers).'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F044/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F044/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F044/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F044/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F044/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F044/sheet.png
+- id: F045
+  goal: G11
+  route: Inbox > Assign selected to me
+  title: Agent ticks two unassigned tickets and assigns only those to themselves
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S053
+  - S049
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: 'Log in as alice, Inbox, tick #3 and #6 (both Unassigned), click ''Assign selected to me'''
+    see: '''2 ticket(s) assigned to you.'' and both rows show Alice Brandt'
+  - do: Reload
+    see: 'Still Alice Brandt on #3 and #6; #9 still Unassigned'
+  persisted:
+  - tickets 3 and 6 assignee alice; no other ticket changed
+  side_effects: []
+  test_file: userflow-tests/F045-bulk-assign.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F045/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F045/final.png
+- id: F046
+  goal: G11
+  route: Inbox > Close selected
+  title: Clicking a bulk button with nothing ticked says so
+  persona: P3
+  priority: P2
+  variant: wrong_input
+  surfaces:
+  - S052
+  - S055
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, Inbox, click 'Close selected' with no ticks
+    see: '''Select at least one ticket first.'''
+  persisted:
+  - no ticket changed
+  side_effects: []
+  test_file: userflow-tests/F046-bulk-nothing-ticked.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F046/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F046/final.png
+- id: F047
+  goal: G12
+  route: worker
+  title: A pending ticket with no activity for the set number of days closes itself and the customer is told
+  persona: P4
+  priority: P1
+  variant: normal
+  surfaces:
+  - S091
+  - S096
+  - S080
+  - S079
+  - S090
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed; ticket 20 'Delivery address change' is pending, last activity about 40 hours ago
+  steps:
+  - do: Log in as mira, Settings, set the days to 1, click 'Save settings'
+    see: '''Settings saved.'''
+  - do: Wait a few seconds, open the Inbox with Status 'Closed'
+    see: '''Delivery address change'' is closed'
+  - do: (customer Dana) look at email
+    see: An email saying the ticket was closed automatically
+  persisted:
+  - tickets row 20 status closed
+  side_effects:
+  - auto-close email to dana@customer.test
+  test_file: userflow-tests/F047-auto-close.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F047/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F047/final.png
+- id: F048
+  goal: G12
+  route: worker
+  title: A pending ticket with fresh activity is not closed early
+  persona: P4
+  priority: P1
+  variant: alternate
+  surfaces:
+  - S091
+  - S057
+  - S059
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed; ticket 20 is pending and was opened 4 days ago
+  steps:
+  - do: Log in as mira, open 'Delivery address change' (Pending), send a reply now
+    see: '''Reply sent to the customer.''; still Pending'
+  - do: 'Settings: set the days to 3, Save'
+    see: '''Settings saved.'''
+  - do: Wait a few seconds, open the ticket again
+    see: Still Pending (activity was seconds ago, not 3 days ago)
+  persisted:
+  - tickets row 20 status pending
+  side_effects:
+  - no auto-close email
+  test_file: userflow-tests/F048-auto-close-fresh-activity.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: 'Auto-close ignores activity: a pending ticket that got a reply seconds earlier was closed when the days were set to 3, and the customer was emailed ''We
+    had no reply for 3 days'' (worker measures from when the ticket was opened).'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F048/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F048/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F048/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F048/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F048/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F048/sheet.png
+- id: F049
+  goal: G13
+  route: ticket page
+  title: Agent inserts a canned reply after what they already typed and sends it
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S062
+  - S057
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, open 'Export to CSV fails', type 'Hello Eli,' in Reply
+    see: Text in the box
+  - do: Choose 'Refund sent' under 'Insert a canned reply'
+    see: The box has 'Hello Eli,' followed by the canned text
+  - do: Click 'Send'
+    see: The combined reply in the thread
+  persisted:
+  - messages row with both parts
+  side_effects: []
+  test_file: userflow-tests/F049-canned-insert.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F049/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F049/final.png
+- id: F050
+  goal: G13
+  route: sidebar > Canned replies
+  title: Agent can read the canned replies but not change them
+  persona: P3
+  priority: P2
+  variant: normal
+  surfaces:
+  - S063
+  - S064
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, click 'Canned replies'
+    see: The three canned replies; no Edit, Delete or add form
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F050-canned-agent-view.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F050/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F050/final.png
+- id: F051
+  goal: G14
+  route: sidebar > API token
+  title: Agent finds their API token and an assistant can connect with it
+  persona: P3
+  priority: P1
+  variant: normal
+  surfaces:
+  - S065
+  - S066
+  - S100
+  - S101
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, click 'API token'
+    see: A token and the command to start the MCP server
+  - do: Start the MCP server with that token and list tickets
+    see: The server connects and returns tickets
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F051-api-token.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F051/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F051/final.png
+- id: F052
+  goal: G15
+  route: Team > invite as Agent
+  title: Admin invites a teammate as Agent; they accept by email link and join as an agent
+  persona: P4
+  priority: P1
+  variant: handoff
+  surfaces:
+  - S070
+  - S071
+  - S072
+  - S075
+  - S076
+  - S077
+  - S086
+  - S087
+  - S090
+  - S047
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as mira, click 'Team'
+    see: Team list and 'No pending invitations.'
+  - do: Type newagent@helpline.test, Role 'Agent', click 'Send invitation'
+    see: '''Invitation sent.'' and the address under Pending invitations'
+  - do: (invitee) open the invitation email and click its link
+    see: '''Join the support team'', ''You were invited as newagent@helpline.test.'''
+  - do: Type a name and a password, click 'Join'
+    see: Dashboard, signed in with that name as agent; 'Nothing assigned to you.'; no Team/Settings in the sidebar
+  - do: (mira) reload Team
+    see: The new teammate is listed as agent, Active; the invitation is no longer pending
+  persisted:
+  - users row newagent@helpline.test role agent
+  - invites row accepted
+  side_effects:
+  - invitation email
+  test_file: userflow-tests/F052-invite-agent.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F052/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F052/final.png
+- id: F053
+  goal: G15
+  route: Team > invite as Admin
+  title: Admin invites a teammate as Admin and they join as an admin
+  persona: P4
+  priority: P1
+  variant: handoff
+  surfaces:
+  - S072
+  - S075
+  - S077
+  - S070
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as mira, Team, invite newadmin@helpline.test with Role 'Admin'
+    see: '''Invitation sent.''; pending invitation shows role admin'
+  - do: (invitee) accept from the email link with a name and password
+    see: Dashboard signed in as admin; sidebar has Team, Settings, Export tickets
+  persisted:
+  - users row newadmin@helpline.test role admin
+  side_effects:
+  - invitation email
+  test_file: userflow-tests/F053-invite-admin.test.js
+  status: fail
+  failure_class: INTEGRATION
+  finding: 'Inviting someone as Admin makes them an agent: the pending invitation already shows ''agent'' and the invitee joins without Team/Settings (page sends
+    ''Admin'', server only recognises ''admin'').'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F053/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F053/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F053/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F053/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F053/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F053/sheet.png
+- id: F054
+  goal: G15
+  route: Team > Resend invite
+  title: Admin sends a pending invitation again
+  persona: P4
+  priority: P1
+  variant: normal
+  surfaces:
+  - S074
+  - S075
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as mira, Team, invite newagent@helpline.test
+    see: Pending invitation with a 'Resend invite' button
+  - do: Click 'Resend invite'
+    see: A confirmation in words, and a second invitation email arrives
+  persisted: []
+  side_effects:
+  - second invitation email to newagent@helpline.test
+  test_file: userflow-tests/F054-invite-resend.test.js
+  status: fail
+  failure_class: MISSING_FEATURE
+  finding: '''Resend invite'' does nothing: no request is made, no second email is sent, and the page still shows the old ''Invitation sent.'' message.'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F054/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F054/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F054/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F054/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F054/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F054/sheet.png
+- id: F055
+  goal: G15
+  route: Team > invite
+  title: Admin who invites a bad or already-used address is told so
+  persona: P4
+  priority: P2
+  variant: wrong_input
+  surfaces:
+  - S072
+  - S087
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: 'Team: invite ''not-an-email'''
+    see: '''Enter a valid email address.'''
+  - do: Invite alice@helpline.test
+    see: '''That email already has an account.'''
+  persisted:
+  - no invites row
+  side_effects:
+  - no email
+  test_file: userflow-tests/F055-invite-wrong-input.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F055/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F055/final.png
+- id: F056
+  goal: G15
+  route: invitation link
+  title: An invitation link cannot be used twice
+  persona: P1
+  priority: P2
+  variant: interrupted
+  surfaces:
+  - S076
+  - S077
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Admin invites; invitee accepts from the email link
+    see: Dashboard
+  - do: Open the same link again in a new browser session
+    see: '''This invitation is invalid or was already used.'' and no form'
+  persisted:
+  - one users row for the invitee
+  side_effects: []
+  test_file: userflow-tests/F056-invite-link-once.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F056/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F056/final.png
+- id: F057
+  goal: G16
+  route: Team > Deactivate
+  title: 'Admin deactivates a teammate: they cannot log in and their tickets go back to Unassigned'
+  persona: P4
+  priority: P1
+  variant: normal
+  surfaces:
+  - S073
+  - S087
+  - S016
+  - S049
+  - S043
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed; Bob has 5 open tickets
+  steps:
+  - do: Log in as mira, Team, click 'Deactivate' on Bob Tanaka
+    see: '''Team member deactivated. Their tickets are back in Unassigned.''; Bob shows Deactivated'
+  - do: 'Inbox: Status ''Open'', Assigned to ''Unassigned'', Apply'
+    see: Bob's five open tickets (e.g. 'Cannot add a second user') are in the list
+  - do: (Bob) try to log in
+    see: '''This account has been deactivated.'''
+  persisted:
+  - users row bob active = 0
+  - no ticket has assignee bob
+  side_effects: []
+  test_file: userflow-tests/F057-deactivate.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: 'Deactivating a teammate does not release their tickets: admin is told ''Their tickets are back in Unassigned'', but all 10 of Bob''s tickets stay assigned
+    to him and none appear under Unassigned. (Bob really cannot log in.)'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F057/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F057/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F057/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F057/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F057/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F057/sheet.png
+- id: F058
+  goal: G17
+  route: sidebar > Settings
+  title: Admin changes the company name and auto-close days and they stick
+  persona: P4
+  priority: P1
+  variant: normal
+  surfaces:
+  - S078
+  - S079
+  - S080
+  - S087
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as mira, click 'Settings'
+    see: Company name 'Helpline', days 7, email switch ticked
+  - do: Change the company name to 'Acme Support', days to 10, click 'Save settings'
+    see: '''Settings saved.'''
+  - do: Reload
+    see: '''Acme Support'' in the form and as the sidebar heading; days 10'
+  persisted:
+  - settings rows company_name = Acme Support, auto_close_days = 10
+  side_effects: []
+  test_file: userflow-tests/F058-settings.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F058/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F058/final.png
+- id: F059
+  goal: G17
+  route: sidebar > Settings
+  title: With 'Email customers when an agent replies' switched off, customers get no reply emails
+  persona: P4
+  priority: P1
+  variant: normal
+  surfaces:
+  - S080
+  - S057
+  - S092
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as mira, Settings, untick 'Email customers when an agent replies', Save
+    see: '''Settings saved.'''
+  - do: Inbox, open 'Export to CSV fails', send a reply
+    see: '''Reply sent to the customer.'''
+  - do: (customer Eli) look at email
+    see: No 'New reply' email
+  persisted:
+  - settings row notify_customer_on_reply = 0
+  side_effects:
+  - no reply email queued
+  test_file: userflow-tests/F059-settings-no-reply-email.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: With 'Email customers when an agent replies' switched off and saved, the customer still gets the reply email.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F059/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F059/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F059/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F059/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F059/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F059/sheet.png
+- id: F060
+  goal: G17
+  route: address bar
+  title: An agent cannot see or change the settings
+  persona: P3
+  priority: P1
+  variant: not_allowed
+  surfaces:
+  - S079
+  - S080
+  - S017
+  start: 'login page (http://localhost:4290/), logged out; then changes the address to /settings.html (typing the address is the point: agents have no Settings menu
+    item)'
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice
+    see: No 'Settings' in the sidebar
+  - do: Change the address to /settings.html
+    see: '''No access''; no settings form, no values shown'
+  - do: 'If a form is shown: change the company name and Save'
+    see: Refused in words; the company name does not change
+  persisted:
+  - settings unchanged
+  side_effects: []
+  test_file: userflow-tests/F060-agent-settings-refused.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: An agent who types /settings.html sees the settings form with its values, changes the company name and is told 'Settings saved.'; the change is saved for
+    everyone.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F060/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F060/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F060/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F060/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F060/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F060/sheet.png
+- id: F061
+  goal: G17
+  route: sidebar > Settings
+  title: Admin who enters bad settings is told so
+  persona: P4
+  priority: P2
+  variant: wrong_input
+  surfaces:
+  - S080
+  - S087
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: 'Settings: empty company name, Save'
+    see: '''Company name is required.'''
+  - do: Days 0, Save
+    see: A message that days must be between 1 and 365
+  persisted:
+  - settings unchanged
+  side_effects: []
+  test_file: userflow-tests/F061-settings-wrong-input.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F061/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F061/final.png
+- id: F062
+  goal: G18
+  route: sidebar > Canned replies
+  title: Admin adds a canned reply and agents can insert it
+  persona: P4
+  priority: P1
+  variant: normal
+  surfaces:
+  - S083
+  - S064
+  - S062
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as mira, Canned replies, type a title and text, click 'Save'
+    see: '''Canned reply saved.'' and it is in the list'
+  - do: Open a ticket from the inbox, look at 'Insert a canned reply'
+    see: The new title is offered and inserts its text
+  persisted:
+  - canned row with this title and text
+  side_effects: []
+  test_file: userflow-tests/F062-canned-add.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F062/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F062/final.png
+- id: F063
+  goal: G18
+  route: sidebar > Canned replies
+  title: Admin edits and deletes a canned reply
+  persona: P4
+  priority: P2
+  variant: normal
+  surfaces:
+  - S084
+  - S083
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: 'Canned replies: click ''Edit'' on ''Refund sent'', change the text, ''Save'''
+    see: '''Canned reply saved.'' and the new text in the list'
+  - do: Click 'Delete' on 'Closing after fix'
+    see: '''Canned reply deleted.'' and it is gone'
+  - do: Reload
+    see: Edit kept, deleted one still gone
+  persisted:
+  - canned row changed; one canned row removed
+  side_effects: []
+  test_file: userflow-tests/F063-canned-edit-delete.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F063/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F063/final.png
+- id: F064
+  goal: G18
+  route: sidebar > Canned replies
+  title: With every canned reply deleted the page says there are none
+  persona: P4
+  priority: P2
+  variant: empty
+  surfaces:
+  - S084
+  - S085
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: 'Canned replies: delete all three'
+    see: '''No canned replies yet.'''
+  persisted:
+  - no canned rows
+  side_effects: []
+  test_file: userflow-tests/F064-canned-empty.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F064/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F064/final.png
+- id: F065
+  goal: G19
+  route: sidebar > Export tickets
+  title: Admin downloads every ticket as a CSV file
+  persona: P4
+  priority: P1
+  variant: normal
+  surfaces:
+  - S081
+  - S082
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as mira, click 'Export tickets'
+    see: A file tickets.csv downloads with a header row and one row for each of the 32 tickets
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F065-export.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F065/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F065/final.png
+- id: F066
+  goal: G19
+  route: address bar
+  title: Customers and agents cannot download the export
+  persona: P2
+  priority: P0
+  variant: not_allowed
+  surfaces:
+  - S082
+  - S017
+  start: 'login page (http://localhost:4290/), logged out; then changes the address to /api/export.csv (typing the address is the point: only admins have the menu
+    item)'
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as dana (customer); no 'Export tickets' in the sidebar; change the address to /api/export.csv
+    see: Refused in words; no file, no other customers' tickets
+  - do: Log in as alice (agent); change the address to /api/export.csv
+    see: Refused in words; no file
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F066-export-refused.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: Any logged-in customer or agent who types /api/export.csv downloads tickets.csv with all 32 tickets, including other customers' names, emails and subjects.
+    No refusal.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F066/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F066/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F066/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F066/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F066/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F066/sheet.png
+- id: F067
+  goal: G17
+  route: address bar
+  title: Customers and agents are kept out of pages that are not theirs
+  persona: P2
+  priority: P1
+  variant: not_allowed
+  surfaces:
+  - S017
+  - S071
+  - S049
+  - S056
+  start: login page (http://localhost:4290/), logged out; then changes the address (typing the address is the point)
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as dana (customer); change the address to /inbox.html, then /ticket.html?id=3
+    see: '''No access'' each time; no ticket list, no ticket of Eli''s'
+  - do: Log in as alice (agent); change the address to /team.html
+    see: '''No access''; no team list'
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F067-wrong-role-pages.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F067/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F067/final.png
+- id: F068
+  goal: G20
+  route: MCP list_tickets / get_ticket
+  title: Assistant lists tickets (all, by status, by agent) and reads one with its conversation
+  persona: P5
+  priority: P1
+  variant: normal
+  surfaces:
+  - S100
+  - S101
+  - S102
+  start: MCP client connected with alice's API token
+  preconditions: data reset to seed
+  steps:
+  - do: Call list_tickets with no arguments
+    see: 32 tickets
+  - do: Call list_tickets with status 'pending'
+    see: 3 tickets, all pending
+  - do: Call list_tickets with assignee_email bob@helpline.test
+    see: Only Bob's tickets
+  - do: Call get_ticket id 1
+    see: Subject 'Refund not received', the conversation including the internal note
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F068-mcp-list-get.test.js
+  status: fail
+  failure_class: INTEGRATION
+  finding: 'MCP list_tickets ignores the status filter: status ''pending'' returns all 32 tickets of every status (schema says `status`, handler reads `state`). Listing
+    all, by agent, and get_ticket work.'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F068/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F068/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F068/walk.txt
+- id: F069
+  goal: G20
+  route: MCP search_tickets
+  title: Assistant searches tickets
+  persona: P5
+  priority: P1
+  variant: normal
+  surfaces:
+  - S103
+  start: MCP client connected with alice's API token
+  preconditions: data reset to seed
+  steps:
+  - do: List the tools
+    see: search_tickets is among them
+  - do: Call search_tickets for 'refund'
+    see: '''Refund not received'' is in the result'
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F069-mcp-search.test.js
+  status: fail
+  failure_class: MISSING_FEATURE
+  finding: 'MCP search_tickets does not exist: not in the tool list, calling it answers ''Unknown tool: search_tickets''. The PRD and the API token page both promise
+    it.'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F069/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F069/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F069/walk.txt
+- id: F070
+  goal: G21
+  route: MCP create_ticket, existing customer
+  title: Assistant opens a ticket for an existing customer; it appears in their portal and the inbox
+  persona: P5
+  priority: P1
+  variant: normal
+  surfaces:
+  - S104
+  - S026
+  - S049
+  start: MCP client connected with alice's API token
+  preconditions: data reset to seed
+  steps:
+  - do: Call create_ticket for dana@customer.test with subject, description, priority high
+    see: An id and a link
+  - do: (Dana) log in to the portal
+    see: The ticket is in My tickets with priority high
+  - do: (Alice) open the inbox and click the ticket
+    see: The ticket opens with the description
+  persisted:
+  - tickets row for dana
+  side_effects: []
+  test_file: userflow-tests/F070-mcp-create-existing.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F070/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F070/final.png
+- id: F071
+  goal: G21
+  route: MCP create_ticket, new email
+  title: Assistant opens a ticket for an address with no account; the customer is created and the ticket works like any other
+  persona: P5
+  priority: P1
+  variant: alternate
+  surfaces:
+  - S104
+  - S049
+  - S056
+  - S057
+  start: MCP client connected with alice's API token
+  preconditions: data reset to seed
+  steps:
+  - do: Call create_ticket for newperson@customer.test
+    see: An id and a link
+  - do: (Alice) open the inbox, click the ticket
+    see: The ticket opens showing the customer newperson@customer.test and the description
+  - do: (Alice) send a reply
+    see: '''Reply sent to the customer.'''
+  persisted:
+  - users row newperson@customer.test role customer
+  - tickets row with that customer
+  side_effects:
+  - reply email to newperson@customer.test
+  test_file: userflow-tests/F071-mcp-create-new-customer.test.js
+  status: fail
+  failure_class: SOFTWARE_BUG
+  finding: MCP create_ticket for an address with no account creates no customer; the ticket shows customer '—' in the inbox and opening it gives 'Could not load this
+    ticket' (HTTP 500, TypeError reading 'name' in the server log).
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F071/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F071/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F071/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F071/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F071/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F071/sheet.png
+- id: F072
+  goal: G22
+  route: MCP add_reply (public)
+  title: Assistant replies publicly; the customer sees it and is emailed
+  persona: P5
+  priority: P1
+  variant: normal
+  surfaces:
+  - S105
+  - S033
+  - S092
+  start: MCP client connected with alice's API token
+  preconditions: data reset to seed
+  steps:
+  - do: Call add_reply on ticket 3 with a body
+    see: ok
+  - do: (Eli) open the ticket in the portal
+    see: The reply from Alice Brandt (support)
+  - do: (Eli) look at email
+    see: '''New reply on "Export to CSV fails"'''
+  persisted:
+  - messages row not internal
+  side_effects:
+  - reply email to eli@customer.test
+  test_file: userflow-tests/F072-mcp-reply.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F072/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F072/final.png
+- id: F073
+  goal: G22
+  route: 'MCP add_reply internal: true'
+  title: 'Assistant adds an internal note with internal: true; the customer never sees it and is not emailed'
+  persona: P5
+  priority: P0
+  variant: normal
+  surfaces:
+  - S105
+  - S033
+  - S056
+  start: MCP client connected with alice's API token
+  preconditions: data reset to seed
+  steps:
+  - do: 'Call add_reply on ticket 3 with internal: true'
+    see: 'ok, internal: true'
+  - do: (Alice) open the ticket in the web app
+    see: The note is marked 'internal note'
+  - do: (Eli) open the ticket in the portal
+    see: The note is not shown
+  - do: (Eli) look at email
+    see: No email containing the note
+  persisted:
+  - messages row internal = 1
+  side_effects:
+  - no email to the customer
+  test_file: userflow-tests/F073-mcp-internal-note.test.js
+  status: fail
+  failure_class: INTEGRATION
+  finding: 'MCP add_reply with internal: true is saved as a public reply (tool answers internal: false): the customer sees the note in the portal and gets it by email
+    (schema says `internal`, handler reads `is_internal`).'
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F073/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F073/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F073/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F073/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F073/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F073/sheet.png
+- id: F074
+  goal: G23
+  route: MCP set_status
+  title: Assistant closes a ticket; the web app shows it closed and the customer is emailed
+  persona: P5
+  priority: P1
+  variant: normal
+  surfaces:
+  - S106
+  - S093
+  - S033
+  start: MCP client connected with alice's API token
+  preconditions: data reset to seed
+  steps:
+  - do: Call set_status on ticket 3 with status closed
+    see: ok
+  - do: (Eli) open the ticket in the portal
+    see: Shows closed
+  - do: (Eli) look at email
+    see: '''Your ticket was closed: "Export to CSV fails"'''
+  persisted:
+  - tickets row 3 status closed
+  side_effects:
+  - closed email to eli@customer.test
+  test_file: userflow-tests/F074-mcp-set-status.test.js
+  status: fail
+  failure_class: FLOW_BROKEN
+  finding: Closing a ticket through MCP set_status sends the customer no 'ticket was closed' email (the web app does send one). Status is saved and shown.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F074/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F074/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F074/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F074/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F074/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F074/sheet.png
+- id: F075
+  goal: G23
+  route: MCP assign_ticket
+  title: Assistant assigns a ticket to an agent
+  persona: P5
+  priority: P1
+  variant: normal
+  surfaces:
+  - S107
+  - S049
+  start: MCP client connected with alice's API token
+  preconditions: data reset to seed
+  steps:
+  - do: Call assign_ticket on ticket 3 with agent_email bob@helpline.test
+    see: ok
+  - do: (Bob) log in, click 'Assigned to me' on the dashboard
+    see: '''Export to CSV fails'' is listed'
+  persisted:
+  - tickets row 3 assignee bob
+  side_effects: []
+  test_file: userflow-tests/F075-mcp-assign.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F075/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F075/final.png
+- id: F076
+  goal: G20
+  route: MCP with a bad token
+  title: An assistant with a wrong token, or a deactivated agent's token, is refused in words
+  persona: P5
+  priority: P1
+  variant: not_allowed
+  surfaces:
+  - S100
+  - S101
+  - S073
+  start: MCP client connected with a made-up token; then with bob's token after an admin deactivates Bob
+  preconditions: data reset to seed
+  steps:
+  - do: Call list_tickets with a made-up token
+    see: An error saying the token does not match an active agent; no tickets
+  - do: (Mira) deactivates Bob in Team; call list_tickets with Bob's token
+    see: The same refusal; no tickets
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F076-mcp-bad-token.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F076/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F076/final.png
+- id: F077
+  goal: G20
+  route: MCP get_ticket
+  title: Assistant asking for a ticket that does not exist is told so
+  persona: P5
+  priority: P2
+  variant: wrong_input
+  surfaces:
+  - S102
+  start: MCP client connected with alice's API token
+  preconditions: data reset to seed
+  steps:
+  - do: Call get_ticket id 9999
+    see: 'An error in words: ''Ticket 9999 not found.'''
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F077-mcp-unknown-ticket.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F077/output.txt
+- id: F078
+  goal: G24
+  route: sidebar > Help centre
+  title: Customer opens the Help centre from the sidebar
+  persona: P2
+  priority: P2
+  variant: normal
+  surfaces:
+  - S028
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as dana, click 'Help centre'
+    see: A help page (some real content, with the sidebar still there)
+  persisted: []
+  side_effects: []
+  test_file: userflow-tests/F078-help-centre.test.js
+  status: fail
+  failure_class: MISSING_FEATURE
+  finding: Customer menu item 'Help centre' opens a bare 'Not found' page (HTTP 404) with no menu and no way back except the browser's Back button.
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F078/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F078/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F078/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/rerun/F078/failure.png
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F078/walk.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/walk/F078/sheet.png
+- id: F079
+  goal: G10
+  route: return visit
+  title: An agent's reply and status change are still there in a new session
+  persona: P3
+  priority: P1
+  variant: return_visit
+  surfaces:
+  - S057
+  - S059
+  - S015
+  - S002
+  - S056
+  start: login page (http://localhost:4290/), logged out
+  preconditions: data reset to seed
+  steps:
+  - do: Log in as alice, open 'Export to CSV fails', send a reply, choose Status 'Pending', log out
+    see: Login page
+  - do: In a new browser session log in as alice, Inbox with Status 'Pending', open the ticket
+    see: The reply is in the thread and Status is Pending
+  persisted:
+  - messages row by alice on ticket 3; tickets row 3 status pending
+  side_effects: []
+  test_file: userflow-tests/F079-agent-return-visit.test.js
+  status: pass
+  failure_class: null
+  finding: ''
+  last_run:
+    commit: 54b133783e2f8b5542034e632949a9a5a0bb20f6
+    run_id: 20261117T095810Z-54b1337
+    evidence:
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F079/output.txt
+    - .userflow/runs/20261117T095810Z-54b1337/evidence/F079/final.png

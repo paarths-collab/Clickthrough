@@ -8,8 +8,18 @@
   product.
 - Passing unit tests, a clean build, or code that "should work" are not
   evidence that a user can use the product.
-- The session that built or changed the product does not evaluate it.
-  Evaluation runs in a separate, fresh session using the `uf-run` skill.
+- After building or changing anything, and before saying it is done or
+  fixed, run the `uf-ready-check` skill: start the real product and walk
+  the user flows you touched. Report what was verified by use and what
+  was not.
+- While building, follow the "While you build" list in `uf-ready-check`
+  (one name per field everywhere, every caller of a changed route, every
+  setting has a reader, every route to a goal gets the same checks and
+  side effects).
+- The session that built or changed the product does not give the release
+  verdict. That runs in a separate, fresh session using the `uf-run`
+  skill.
 - To check readiness or find what is broken for users, use the `uf-run`
-  skill. Rules for that work are in `.userflow/guide.md`.
+  skill. What to look for is in the `uf-patterns` skill; rules are in
+  `.userflow/guide.md`.
 <!-- user-flow-qa:end -->

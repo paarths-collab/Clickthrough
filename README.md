@@ -10,12 +10,13 @@ evidence. Every run is recorded so it can be studied later.
 
 | Path | What it is |
 |---|---|
-| `skills/` | `uf-run` (entry point) and the five phases: `uf-preflight`, `uf-discover`, `uf-flows`, `uf-test`, `uf-evaluate`. |
+| `skills/` | `uf-run` (full evaluation, entry point) and its five phases: `uf-preflight`, `uf-discover`, `uf-flows`, `uf-test`, `uf-evaluate`. `uf-patterns`: what breaks for users between frontend, backend, database, jobs, email and MCP, and how to see each one. `uf-ready-check`: the short check the building session runs before it says "done". |
 | `templates/` | Shared rules (`guide.md`), the flow registry (`flows.yaml`), report, decision log, tool-gaps log, CLAUDE.md/AGENTS.md rules. |
 | `scripts/` | `new-run.sh` (start a recorded run), `collect-run.sh` (copy the Claude Code or Codex session log), `uf-check.py` (registry validator and verdict). |
 | `install.sh` | `./install.sh claude|codex|both <project>` |
 | `experiment/` | Before/after protocol, scorecard, answer key for the sample app. |
-| `sample-app/` | Tasklet, a small app with ten planted user-flow bugs. Its unit tests pass. |
+| `sample-app/` | Tasklet, a small app with ten planted user-flow bugs. Its unit tests pass. Good for a first smoke run. |
+| `sample-app-hard/` | Helpline, a support inbox with three roles, a web app, a background worker, an MCP server and 25 planted bugs in four tiers of difficulty. Its tests pass. Use this one for before/after comparisons. |
 
 ## Quick start
 
@@ -23,9 +24,13 @@ evidence. Every run is recorded so it can be studied later.
 ./install.sh claude /path/to/project
 ```
 
-Then open a new agent session in that project (not the one that built it)
-and ask: "Is this project ready for real users? Use uf-run." Add `auto` to
-run without stopping for review.
+Three ways to use it:
+
+| When | Skill | Ask |
+|---|---|---|
+| While building, before saying "done" | `uf-ready-check` | Installed rules make the builder run it. Or: "Check this with uf-ready-check." |
+| Release check | `uf-run` | In a **new** session (not the one that built it): "Is this project ready for real users? Use uf-run." Add `auto` to run without stopping for review. |
+| Any time you look for bugs | `uf-patterns` | "Find what is broken for users. Use uf-patterns." |
 
 Requirements: Node 22.13+ for the sample app, Python 3 with PyYAML for
 `uf-check.py`, and Playwright (or the project's own end-to-end tool) for the

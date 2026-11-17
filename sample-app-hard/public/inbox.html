@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Inbox - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <h1>Inbox</h1>
+  <form id="filters" class="row">
+    <div><label for="status">Status</label>
+      <select id="status">
+        <option value="">Any status</option>
+        <option value="open">Open</option>
+        <option value="pending">Pending</option>
+        <option value="closed">Closed</option>
+      </select></div>
+    <div><label for="assignee">Assigned to</label>
+      <select id="assignee">
+        <option value="">Anyone</option>
+        <option value="me">Me</option>
+        <option value="none">Unassigned</option>
+      </select></div>
+    <div><label for="q">Search</label><input type="search" id="q" placeholder="Words in subject or description"></div>
+    <div class="fit"><button type="submit">Apply</button></div>
+  </form>
+  <p id="summary" class="muted"></p>
+  <div id="list"></div>
+  <div class="pager">
+    <button type="button" class="secondary" id="prev">Previous</button>
+    <span id="page"></span>
+    <button type="button" class="secondary" id="next">Next</button>
+  </div>
+  <p>
+    <button type="button" id="bulk-close" class="secondary">Close selected</button>
+    <button type="button" id="bulk-assign" class="secondary">Assign selected to me</button>
+  </p>
+  <p id="msg" class="msg"></p>
+</main>
+<script src="/app.js"></script>
+<script>
+const PER_PAGE = 10;
+(async () => {
+  await boot(['agent', 'admin']);
+  let page = 1;
+  let pages = 1;
+
+  const agents = await api('GET', '/api/agents');
+  for (const agent of agents.data) {
+    $('assignee').insertAdjacentHTML('beforeend', `<option value="${agent.id}">${esc(agent.name)}</option>`);
+  }
+  $('status').value = param('status') ?? 'open';
+  $('assignee').value = param('assignee') ?? '';
+  $('q').value = param('q') ?? '';
+
+  async function load() {
+    const query = new URLSearchParams({
+      status: $('status').value, assignee: $('assignee').value, q: $('q').value.trim(),
+      page: String(page), per_page: String(PER_PAGE),
+    });
+    const res = await api('GET', `/api/tickets?${query}`);
+    const tickets = res.data.tickets || [];
+    pages = Math.max(1, Math.ceil((res.data.total || 0) / PER_PAGE));
+    $('summary').textContent = `${res.data.total || 0} ticket(s) match.`;
+    $('page').textContent = `Page ${page} of ${pages}`;
+    $('prev').disabled = page <= 1;
+    $('next').disabled = page >= pages;
+    $('list').innerHTML = tickets.length
+      ? `<table><thead><tr><th></th><th>#</th><th>Subject</th><th>Customer</th><th>Status</th><th>Priority</th><th>Assigned to</th><th>Updated</th></tr></thead><tbody>${
+        tickets.map((t) => `<tr><td><input type="checkbox" class="pick" value="${t.id}" aria-label="Select ticket ${t.id}"></td>
+          <td>${t.id}</td><td><a href="/ticket.html?id=${t.id}">${esc(t.subject)}</a></td><td>${esc(t.customer_name || '—')}</td>
+          <td>${badge(t.status)}</td><td>${badge(t.priority)}</td><td>${esc(t.assignee_name || 'Unassigned')}</td>
+          <td>${when(t.updated_at)}</td></tr>`).join('')}</tbody></table>`
+      : '<p id="empty">No tickets here.</p>';
+  }
+
+  $('filters').addEventListener('submit', (e) => { e.preventDefault(); page = 1; say('msg', ''); load(); });
+  $('prev').addEventListener('click', () => { page -= 1; load(); });
+  $('next').addEventListener('click', () => { page += 1; load(); });
+
+  async function bulk(action, done) {
+    const ids = [...document.querySelectorAll('.pick:checked')].map((box) => Number(box.value));
+    if (!ids.length) return say('msg', 'Select at least one ticket first.', 'error');
+    const res = await api('POST', '/api/tickets/bulk', { ids, action });
+    if (!res.ok) return say('msg', res.data.error || 'That did not work.', 'error');
+    say('msg', done(res.data.updated), 'ok');
+    await load();
+  }
+  $('bulk-close').addEventListener('click', () => bulk('close', (n) => `${n} ticket(s) closed.`));
+  $('bulk-assign').addEventListener('click', () => bulk('assign_me', (n) => `${n} ticket(s) assigned to you.`));
+
+  await load();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Team - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <h1>Team</h1>
+  <div id="members"></div>
+  <h2>Pending invitations</h2>
+  <div id="invites"></div>
+  <h2>Invite someone</h2>
+  <form id="form" class="row">
+    <div><label for="email">Email</label><input type="text" id="email"></div>
+    <div><label for="role">Role</label>
+      <select id="role"><option>Agent</option><option>Admin</option></select></div>
+    <div class="fit"><button type="submit">Send invitation</button></div>
+  </form>
+  <p id="msg" class="msg"></p>
+</main>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  const me = await boot(['admin']);
+
+  async function load() {
+    const res = await api('GET', '/api/team');
+    if (!res.ok) {
+      $('members').innerHTML = `<p class="msg error">${esc(res.data.error || 'Could not load the team.')}</p>`;
+      return;
+    }
+    $('members').innerHTML = `<table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>${
+      res.data.members.map((u) => `<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td>
+        <td>${u.active ? 'Active' : 'Deactivated'}</td>
+        <td>${u.active && u.id !== me.id ? `<button class="small danger" data-deactivate="${u.id}">Deactivate</button>` : ''}</td></tr>`).join('')
+    }</tbody></table>`;
+    $('invites').innerHTML = res.data.invites.length
+      ? `<table><thead><tr><th>Email</th><th>Role</th><th>Sent</th><th></th></tr></thead><tbody>${
+        res.data.invites.map((i) => `<tr><td>${esc(i.email)}</td><td>${esc(i.role)}</td><td>${when(i.created_at)}</td>
+          <td><button class="small secondary resend">Resend invite</button></td></tr>`).join('')}</tbody></table>`
+      : '<p id="no-invites" class="muted">No pending invitations.</p>';
+  }
+
+  $('members').addEventListener('click', async (e) => {
+    const id = e.target.dataset.deactivate;
+    if (!id) return;
+    const res = await api('POST', `/api/team/${id}/deactivate`);
+    if (!res.ok) return say('msg', res.data.error || 'Could not deactivate.', 'error');
+    say('msg', 'Team member deactivated. Their tickets are back in Unassigned.', 'ok');
+    await load();
+  });
+
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const res = await api('POST', '/api/invites', { email: $('email').value, role: $('role').value });
+    if (!res.ok) return say('msg', res.data.error || 'Could not send the invitation.', 'error');
+    $('email').value = '';
+    say('msg', 'Invitation sent.', 'ok');
+    await load();
+  });
+
+  await load();
+})();
+</script>
+</body>
+</html>

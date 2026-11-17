@@ -19,7 +19,11 @@ to the result they can see and that is still there when they come back.
 
 1. **Use the real running product.** Start it, then act on it through the
    door a user uses: the browser for a web app, HTTP for a public API, an MCP
-   client for an MCP server, the command line for a CLI.
+   client for an MCP server, the command line for a CLI, the installed
+   package for a library, the app's UI for a desktop or mobile app, the
+   device or an emulator for firmware. These skills use web words (page,
+   click, menu, refresh); `uf-patterns` has a table that translates them
+   for any kind of product. Choose your own tools for that door.
 2. **No mocks of this product.** Never replace our own frontend, backend,
    database or MCP server with a fake. A third-party service (payments,
    email, SMS) may be stubbed at the network edge, and every stub is listed

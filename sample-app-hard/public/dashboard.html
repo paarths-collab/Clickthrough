@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Dashboard - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <h1 id="hello">Dashboard</h1>
+  <div class="cards">
+    <a class="card" href="/inbox.html?status=open"><strong id="open">–</strong>Open tickets</a>
+    <a class="card" href="/inbox.html?status=open&assignee=none"><strong id="unassigned">–</strong>Unassigned</a>
+    <a class="card" href="/inbox.html?status=open&assignee=me"><strong id="mine">–</strong>Assigned to me</a>
+    <a class="card" href="/inbox.html?status=closed"><strong id="closed">–</strong>Closed this week</a>
+  </div>
+  <h2>My open tickets</h2>
+  <div id="mine-list"><p class="muted">Loading…</p></div>
+</main>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  const user = await boot(['agent', 'admin']);
+  $('hello').textContent = `Good to see you, ${user.name.split(' ')[0]}`;
+  const stats = await api('GET', '/api/stats');
+  $('open').textContent = stats.data.open;
+  $('unassigned').textContent = stats.data.unassigned;
+  $('mine').textContent = stats.data.mine;
+  $('closed').textContent = stats.data.closed_this_week;
+  const res = await api('GET', '/api/tickets?status=open&assignee=me&limit=100');
+  const tickets = res.data.tickets || [];
+  $('mine-list').innerHTML = tickets.length
+    ? `<table><tbody>${tickets.map((t) => `<tr><td>#${t.id}</td><td><a href="/ticket.html?id=${t.id}">${esc(t.subject)}</a></td>
+        <td>${badge(t.priority)}</td><td>${esc(t.customer_name)}</td></tr>`).join('')}</tbody></table>`
+    : '<p id="empty">Nothing assigned to you. Pick something up from the inbox.</p>';
+})();
+</script>
+</body>
+</html>

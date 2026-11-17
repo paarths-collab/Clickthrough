@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>My tickets - Helpline</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <h1>My tickets</h1>
+  <div id="list"><p class="muted">Loading…</p></div>
+  <a class="button" href="/new-ticket.html">Open a new ticket</a>
+</main>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  await boot(['customer']);
+  const res = await api('GET', '/api/tickets');
+  const tickets = res.data.tickets || [];
+  if (!tickets.length) {
+    $('list').innerHTML = '<p id="empty">You have no tickets yet. Open one and we will get back to you.</p>';
+    return;
+  }
+  $('list').innerHTML = `<table><thead><tr><th>#</th><th>Subject</th><th>Status</th><th>Priority</th><th>Last update</th></tr></thead><tbody>${
+    tickets.map((t) => `<tr><td>${t.id}</td><td><a href="/portal-ticket.html?id=${t.id}">${esc(t.subject)}</a></td>
+      <td>${badge(t.status)}</td><td>${badge(t.priority)}</td><td>${when(t.updated_at)}</td></tr>`).join('')
+  }</tbody></table>`;
+})();
+</script>
+</body>
+</html>
