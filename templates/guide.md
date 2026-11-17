@@ -36,13 +36,16 @@ to the result they can see and that is still there when they come back.
    typing the address *is* what is being tested (a `not_allowed` flow where
    a user changes an id in the address, or a page with `reach: none` checked
    on its own), type it, and say so in a comment at the top of the test.
-4. **Do not judge by reading source.** Source code tells you where to look
-   and helps explain a failure after you have seen it. It never decides
-   whether something works. If reading code makes you suspect a bug, do not
-   report it from the code: write a flow a real user could plausibly do
-   that would hit it, and let the run decide.
+4. **Running beats reading.** When you can run a flow, the run decides,
+   not the code. If reading code makes you suspect a bug, write a flow a
+   real user could plausibly do that would hit it, and let the run decide.
+   When a flow cannot be run (the product will not start, no test account,
+   no inbox), do not stop there: trace it through the code (see "Trace
+   mode" below) and report what you find as `likely_broken`, marked as
+   traced, not run.
 5. **Evidence or it did not happen.** A flow is `pass` only with evidence
-   from a real run. Without evidence the status is `unverified`.
+   from a real run. Without evidence the status is `unverified`. A trace
+   through the code is never a pass.
 6. **Never bend a test to make it pass.** If a test fails, either the
    product is broken or the test is wrong. Say which. Do not loosen the
    check, add retries to hide it, or skip it.
@@ -51,8 +54,9 @@ to the result they can see and that is still there when they come back.
    a test tool the project lacks (for example Playwright as a dev
    dependency, with its config inside `userflow-tests/`) is not a product
    change; list what you added in the report.
-8. **If the product cannot start, stop.** Report the blocker. Do not carry
-   on with imagined results.
+8. **If the product cannot start, do not imagine results.** Report the
+   blocker and exactly what a tester would need to run it, then switch to
+   trace mode for the flows you cannot run.
 9. **Never touch production or shared data.** Before any flow writes data,
    find out where the database, storage, email and payment settings
    point. Run only against a local or test instance. Never reset, seed,
@@ -113,7 +117,30 @@ to work out which steps a cheaper model can follow.
 | `pass` | The flow was run against the real product and every check held. Evidence is linked. |
 | `fail` | The flow was run and the user could not finish, or finished with a wrong result. Needs a `failure_class` and a one-line `finding`. |
 | `unverified` | You believe it may work but have no evidence from a real run. |
-| `blocked` | Could not be run. Needs `failure_class: ENV_BLOCKED` or `TOOL_GAP`. |
+| `blocked` | Could not be run. Needs `failure_class: ENV_BLOCKED` or `TOOL_GAP`. After a trace that found no break, add `trace: "no break found in code"`. |
+| `likely_broken` | Could not be run, and a trace through the code shows where it breaks. Needs `failure_class`, `finding` (what the user would see, and the file and line where it breaks) and `confidence: high`, `medium` or `low`. Never counts as a pass or as a confirmed fail. |
+
+## Trace mode
+
+For a flow you cannot run, follow it through the code the way it would
+run, one hop at a time:
+
+```
+user action → request → handler → saved data → whoever reads it next → what the user sees
+```
+
+At each hop, check the patterns in `uf-patterns` that apply: names that
+differ across a boundary, a route nobody calls or that does not exist, an
+error swallowed, a check on write but not on read, a side effect on one
+route only, a setting nothing reads, a session or token handed over in a
+form the next step cannot use. Read the actual code on both sides of each
+hop; do not assume a helper does what its name says.
+
+Write each break as: what the user would do and see, the file and line
+where it breaks, and how sure you are (`high`: you read both sides and the
+mismatch is certain; `medium`: likely, depends on config or a library's
+behaviour; `low`: suspicion). Then say what would confirm it in one real
+run. P0 flows first.
 
 ## Failure classes
 

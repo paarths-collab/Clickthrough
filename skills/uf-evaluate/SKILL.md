@@ -65,7 +65,11 @@ Follow `.userflow/guide.md`. Log each step in `decisions.md`.
    `finding`, and `last_run` (commit, run id, evidence paths relative to
    the project root). The rules:
    - `pass` needs evidence from this run. No evidence: `unverified`.
-   - Could not run it: `blocked`, with `ENV_BLOCKED` or `TOOL_GAP`.
+   - Could not run it: trace it in code (guide, Trace mode). A break
+     found: `likely_broken`, with class, finding and confidence. No break
+     found: `blocked`, with `ENV_BLOCKED` or `TOOL_GAP` and
+     `trace: "no break found in code"`. Every P0 flow you could not run
+     gets traced; do P1 flows as time allows and say which you skipped.
    - A goal works only if every route to it works.
 9. **Write `report.md`** in the run folder from the template. Findings go
    worst first, each written so a builder can act on it without asking you
@@ -81,7 +85,9 @@ Follow `.userflow/guide.md`. Log each step in `decisions.md`.
 - **READY**: every P0 flow is `pass` with evidence on this commit.
 - **NOT READY**: any P0 flow is `fail`.
 - **CANNOT TELL**: the product would not run, or any P0 flow is
-  `unverified` or `blocked`.
+  `unverified`, `blocked` or `likely_broken`. If any P0 flow is
+  `likely_broken`, say "CANNOT TELL, likely NOT READY" and lead with
+  those flows.
 
 Never round up. Nine of ten P0 flows passing is NOT READY. A flow you
 believe works but did not run is not a pass.

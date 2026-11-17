@@ -42,7 +42,7 @@ not merge phases or skip one because it looks unnecessary.
 
 | # | Skill | Question it answers | Moves on when |
 |---|---|---|---|
-| 1 | `uf-preflight` | Does the software even run? | The real product is up with seed data. If not: stop, report the blocker. |
+| 1 | `uf-preflight` | Does the software even run? | The real product is up with seed data. If not: record the blocker and what a tester needs, then carry on; flows that cannot run are traced in code (guide, Trace mode). |
 | 2 | `uf-discover` | What can a user touch? | `uf-check.py --stage discover` has no errors. In review mode, the human has seen the map. |
 | 3 | `uf-flows` | What will a user try to do? | `uf-check.py --stage flows` has no errors. In review mode, the human has seen the flows. |
 | 4 | `uf-test` | How do we check each flow for real? | Every flow has a test file, or is marked blocked with a reason. |

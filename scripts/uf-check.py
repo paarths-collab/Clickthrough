@@ -35,7 +35,8 @@ SOURCES = {"intent", "code", "both"}
 PRIORITIES = {"P0", "P1", "P2"}
 VARIANTS = {"normal", "alternate", "wrong_input", "not_allowed", "interrupted",
             "empty", "return_visit", "handoff"}
-STATUSES = {"untested", "pass", "fail", "unverified", "blocked"}
+STATUSES = {"untested", "pass", "fail", "unverified", "blocked", "likely_broken"}
+CONFIDENCE = {"high", "medium", "low"}
 CLASSES = {"FLOW_BROKEN", "SOFTWARE_BUG", "INTEGRATION", "MISSING_FEATURE",
            "ENV_BLOCKED", "TEST_DEFECT", "TOOL_GAP"}
 # Surfaces a user reaches by clicking, so they need a stated way in.
@@ -178,7 +179,7 @@ def main():
     # ---- tests ------------------------------------------------------------
     if stage >= 2:
         for f in flows:
-            if f.get("status") == "blocked":
+            if f.get("status") in ("blocked", "likely_broken"):
                 continue
             test_file = f.get("test_file")
             if not test_file:
@@ -205,7 +206,9 @@ def main():
                      f"root): {', '.join(gone)}")
             if status in ("pass", "fail") and not last.get("commit"):
                 err(f"{fid}: {status} without last_run.commit")
-            if status in ("fail", "blocked"):
+            if status == "likely_broken" and f.get("confidence") not in CONFIDENCE:
+                err(f"{fid}: likely_broken needs `confidence: high | medium | low`")
+            if status in ("fail", "blocked", "likely_broken"):
                 if f.get("failure_class") not in CLASSES:
                     err(f"{fid}: {status} needs a failure_class from {sorted(CLASSES)}")
                 if not f.get("finding"):
@@ -242,6 +245,10 @@ def main():
             verdict = "CANNOT TELL (no P0 flows defined)"
         elif any(f.get("status") == "fail" for f in p0):
             verdict = "NOT READY"
+        elif any(f.get("status") == "likely_broken" for f in p0):
+            n = sum(1 for f in p0 if f.get("status") == "likely_broken")
+            verdict = (f"CANNOT TELL, likely NOT READY ({n} P0 flow(s) look broken "
+                       "in code; not run)")
         elif all(f.get("status") == "pass" for f in p0):
             verdict = "READY"
         else:

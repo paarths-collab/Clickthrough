@@ -68,7 +68,9 @@ flows: []
 #    persisted: ["tasks row with this title under this project"]
 #    side_effects: []
 #    test_file: "userflow-tests/F001-add-task-project-page.test.js"   # null if the flow is blocked
-#    status: untested     # untested | pass | fail | unverified | blocked
+#    status: untested     # untested | pass | fail | unverified | blocked | likely_broken
+#    confidence: null     # likely_broken only: high | medium | low (traced in code, not run)
+#    trace: null          # blocked flows traced with no break found: "no break found in code"
 #    failure_class: null  # FLOW_BROKEN | SOFTWARE_BUG | INTEGRATION | MISSING_FEATURE | ENV_BLOCKED | TEST_DEFECT | TOOL_GAP
 #    finding: ""          # one line: what the user experiences
 #    last_run: {commit: "", run_id: "", evidence: []}

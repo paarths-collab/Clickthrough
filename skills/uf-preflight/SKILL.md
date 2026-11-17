@@ -68,13 +68,20 @@ Do them in order. Record the exact command and result for each.
 
 ## If it will not start
 
-Stop here. Do not continue to discovery on a product you cannot run, and do
-not swap in mocks or "test what you can by reading". Spend a reasonable
-effort on obvious environment causes (wrong directory, a missing documented
-step, a port in use). If the cause is in the product, or needs something
-only the human has, write the report with verdict **CANNOT TELL**, class
-`ENV_BLOCKED` or `SOFTWARE_BUG`, the exact command and error, and what is
-needed to get past it.
+Do not swap in mocks. Spend a reasonable effort on obvious environment
+causes (wrong directory, a missing documented step, a port in use). If the
+cause is in the product, or needs something only the human has:
+
+- Record it as a finding (class `ENV_BLOCKED` or `SOFTWARE_BUG`) with the
+  exact command and error.
+- Write down exactly what a tester would need to run every flow for real:
+  services, test accounts per role, seed data, environment variables, an
+  inbox for email. This list is one of the most useful things you produce.
+- Run whatever parts do start (public pages, the API's front door, the
+  CLI's help) and keep them in play.
+- Carry on with discovery and flows. Map from the code what you cannot
+  open. In `uf-evaluate`, flows you cannot run are traced in code (guide,
+  Trace mode). The verdict stays **CANNOT TELL**.
 
 "The app does not start from its own instructions" is one of the most
 valuable findings there is. Report it plainly.

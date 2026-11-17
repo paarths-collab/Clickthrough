@@ -72,6 +72,20 @@ flows, including flows that passed.
 <Things a user would find confusing or awkward that broke no flow: no
 confirmation, no undo, unlabelled fields. One line each, or "none".>
 
+## Likely broken (traced in code, not run)
+
+Flows that could not be run, where a trace through the code shows a break.
+Worst first. Not confirmed: each needs one real run.
+
+| Flow | What the user would see | Where it breaks | Confidence | What would confirm it |
+|---|---|---|---|---|
+| | | | | |
+
+## What a tester needs to run this for real
+
+<Services, test accounts per role, seed data, environment variables,
+inbox. Exactly enough for the next run to pass the blocked flows.>
+
 ## Not verified
 
 | Flow or surface | Why | What would be needed |
