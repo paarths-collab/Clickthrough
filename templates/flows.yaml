@@ -1,0 +1,68 @@
+# User-flow registry. Single source of truth for what a user can do with this
+# product and whether it has been shown to work. Check it with:
+#   python3 .userflow/bin/uf-check.py
+version: 1
+
+product:
+  name: ""
+  purpose: ""            # one paragraph: what the product is for, in plain words
+  intent_sources: []     # where the intent came from: PRD path, README, "described by <person>"
+
+# How to run the real product. Filled in by uf-preflight.
+run:
+  install: ""
+  boot: ""               # one command that starts the whole stack
+  seed: ""
+  reset: ""              # puts data back to a known state between flows
+  stop: ""
+  base_url: ""
+  test_command: ""       # runs every file in userflow-tests/
+  services: []           # - {name: api, check: "GET /health", logs: "path or command"}
+  stubs: []              # third-party services stubbed at the network edge, if any
+
+# Kinds of user. `auth` says how to become them (seeded account, sign-up, token).
+personas: []
+#  - {id: P1, name: "Owner", goal: "Run projects for a small team", auth: "alice@example.com / seeded"}
+
+# Parts of the product, for working through a large product a piece at a time.
+areas: []
+#  - {id: A1, name: "Accounts", status: mapped}     # pending | mapped
+
+# Everything a user can touch.
+surfaces: []
+#  - id: S001
+#    area: A1
+#    type: page           # nav | page | form | action | endpoint | mcp_tool | cli | job | notification | data
+#    name: "Projects page"
+#    location: "/projects.html"
+#    source: both         # intent | code | both   (intent = promised, not found; code = exists, never promised)
+#    personas: [P1]
+#    reach: "sidebar > Projects"   # how a user gets here by clicking; `none` = no way in
+#    leads_to: null       # nav items only: the surface id it opens, or `nowhere` if it is dead
+#    note: ""
+
+# What a user comes here to get done. One goal can have several routes.
+goals: []
+#  - {id: G01, title: "Add a task to a project", persona: P1}
+
+flows: []
+#  - id: F001
+#    goal: G01
+#    route: "from the project page"    # which way of reaching the goal this flow covers
+#    title: "Owner adds a task from the project page"
+#    persona: P1
+#    priority: P0         # P0 = product is useless without it | P1 = important | P2 = nice to have
+#    variant: normal      # normal | alternate | wrong_input | not_allowed | interrupted | empty | return_visit | handoff
+#    surfaces: [S001]
+#    start: "login page"
+#    preconditions: "logged out; seeded account exists"
+#    steps:
+#      - {do: "Log in as the owner", see: "Dashboard with my name"}
+#      - {do: "Click Projects in the sidebar", see: "List of my projects"}
+#    persisted: ["tasks row with this title under this project"]
+#    side_effects: []
+#    test_file: "userflow-tests/F001-add-task-project-page.test.js"
+#    status: untested     # untested | pass | fail | unverified | blocked
+#    failure_class: null  # FLOW_BROKEN | SOFTWARE_BUG | INTEGRATION | MISSING_FEATURE | ENV_BLOCKED | TEST_DEFECT | TOOL_GAP
+#    finding: ""          # one line: what the user experiences
+#    last_run: {commit: "", run_id: "", evidence: []}

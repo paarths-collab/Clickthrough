@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Tasklet - Sign up</title>
+<link rel="stylesheet" href="/style.css"></head>
+<body>
+<div class="auth card">
+  <h2>Create your account</h2>
+  <form id="signup">
+    <input type="text" name="name" placeholder="Your name" required>
+    <input type="email" name="email" placeholder="Email" required>
+    <input type="password" name="password" placeholder="Password (8+ characters)" required>
+    <button type="submit">Sign up</button>
+  </form>
+  <div id="msg" class="msg err"></div>
+  <p class="muted">Already have an account? <a href="/">Log in</a></p>
+</div>
+<script>
+document.getElementById('signup').onsubmit = async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const res = await fetch('/api/signup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: form.get('name'), email: form.get('email'), password: form.get('password'),
+    }),
+  });
+  if (res.ok) location.href = '/dashboard.html';
+  else document.getElementById('msg').textContent = (await res.json()).error;
+};
+</script>
+</body></html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Tasklet - Dashboard</title>
+<link rel="stylesheet" href="/style.css"></head>
+<body><div class="layout"><nav class="sidebar" id="sidebar"></nav>
+<main>
+  <h2 id="hello">Dashboard</h2>
+  <div class="card">
+    <h3>Quick add</h3>
+    <form id="quick">
+      <input type="text" name="title" placeholder="What needs doing?" required>
+      <select name="project" id="project-select"></select>
+      <button type="submit">Add task</button>
+    </form>
+    <div id="msg" class="msg"></div>
+  </div>
+  <div class="card">
+    <h3>Your projects</h3>
+    <ul class="list" id="projects"></ul>
+  </div>
+</main></div>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  const user = await boot();
+  document.getElementById('hello').textContent = `Welcome back, ${user.name}`;
+  const { projects } = await (await api('GET', '/api/projects')).json();
+  document.getElementById('projects').innerHTML = projects.length
+    ? projects.map((p) => `<li><a class="grow" href="/project.html?id=${p.id}">${esc(p.name)}</a>
+        <span class="muted">${p.open_tasks} open</span></li>`).join('')
+    : '<li class="muted">No projects yet. Create one on the Projects page.</li>';
+  document.getElementById('project-select').innerHTML =
+    projects.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+
+  document.getElementById('quick').onsubmit = async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    const res = await api('POST', '/api/tasks', {
+      title: form.get('title'),
+      projectId: Number(form.get('project')),
+    });
+    const msg = document.getElementById('msg');
+    if (res.ok) { msg.className = 'msg ok'; msg.textContent = 'Task added!'; e.target.reset(); }
+    else { msg.className = 'msg err'; msg.textContent = (await res.json()).error; }
+  };
+})();
+</script>
+</body></html>

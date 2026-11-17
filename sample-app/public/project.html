@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Tasklet - Project</title>
+<link rel="stylesheet" href="/style.css"></head>
+<body><div class="layout"><nav class="sidebar" id="sidebar"></nav>
+<main>
+  <p class="muted"><a href="/projects.html">&larr; All projects</a></p>
+  <h2 id="title">Project</h2>
+  <div class="card">
+    <form id="new-task">
+      <input type="text" name="title" placeholder="New task" required>
+      <button type="submit">Add task</button>
+    </form>
+  </div>
+  <div class="card"><ul class="list" id="tasks"></ul></div>
+</main></div>
+<script src="/app.js"></script>
+<script>
+const projectId = Number(new URLSearchParams(location.search).get('id'));
+
+async function load() {
+  const res = await api('GET', `/api/projects/${projectId}/tasks`);
+  if (!res.ok) { document.getElementById('title').textContent = 'Project not found'; return; }
+  const { project, tasks } = await res.json();
+  document.getElementById('title').textContent = project.name;
+  document.getElementById('tasks').innerHTML = tasks.length
+    ? tasks.map((t) => `<li class="${t.done ? 'done' : ''}" data-id="${t.id}">
+        <input type="checkbox" ${t.done ? 'checked' : ''} aria-label="Done: ${esc(t.title)}">
+        <span class="grow">${esc(t.title)}</span>
+        <button class="link" aria-label="Delete ${esc(t.title)}">Delete</button></li>`).join('')
+    : '<li class="muted">No tasks in this project yet.</li>';
+}
+
+(async () => {
+  await boot();
+  await load();
+
+  document.getElementById('new-task').onsubmit = async (e) => {
+    e.preventDefault();
+    const title = new FormData(e.target).get('title');
+    const res = await api('POST', '/api/tasks', { title, project_id: projectId });
+    if (res.ok) { e.target.reset(); await load(); }
+  };
+
+  document.getElementById('tasks').addEventListener('change', async (e) => {
+    if (e.target.type !== 'checkbox') return;
+    const li = e.target.closest('li');
+    li.classList.toggle('done', e.target.checked);
+    try {
+      await api('POST', `/api/tasks/${li.dataset.id}/complete`, { done: e.target.checked });
+    } catch (err) { /* offline - will sync next time */ }
+  });
+
+  document.getElementById('tasks').addEventListener('click', async (e) => {
+    if (e.target.tagName !== 'BUTTON') return;
+    const li = e.target.closest('li');
+    const res = await api('DELETE', `/api/tasks/${li.dataset.id}`);
+    if (res.ok) await load();
+  });
+})();
+</script>
+</body></html>

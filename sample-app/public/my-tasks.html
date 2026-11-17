@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Tasklet - My Tasks</title>
+<link rel="stylesheet" href="/style.css"></head>
+<body><div class="layout"><nav class="sidebar" id="sidebar"></nav>
+<main>
+  <h2>My Tasks</h2>
+  <div class="card"><ul class="list" id="tasks"><li class="muted">Loading…</li></ul></div>
+</main></div>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  await boot();
+  const res = await api('GET', '/api/my-tasks');
+  const { tasks } = await res.json();
+  document.getElementById('tasks').innerHTML = tasks.length
+    ? tasks.map((t) => `<li class="${t.done ? 'done' : ''}">
+        <span class="grow">${esc(t.title)}</span>
+        <span class="muted">${esc(t.project)}</span></li>`).join('')
+    : '<li class="muted">No tasks yet. Add one from a project.</li>';
+})();
+</script>
+</body></html>
