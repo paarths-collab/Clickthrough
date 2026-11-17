@@ -53,6 +53,12 @@ to the result they can see and that is still there when they come back.
    change; list what you added in the report.
 8. **If the product cannot start, stop.** Report the blocker. Do not carry
    on with imagined results.
+9. **Never touch production or shared data.** Before any flow writes data,
+   find out where the database, storage, email and payment settings
+   point. Run only against a local or test instance. Never reset, seed,
+   migrate or write test data on a remote database unless the human said
+   it is a disposable test instance. If you cannot tell, stop and report
+   that as the blocker (verdict CANNOT TELL).
 
 ## Files
 

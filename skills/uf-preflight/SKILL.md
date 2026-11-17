@@ -36,7 +36,11 @@ Do them in order. Record the exact command and result for each.
    example; the app opens its first screen; the MCP server lists its tools;
    every worker process is up. Read the logs after start. Errors at
    startup are findings.
-7. **Find or make a reset.** Flows change data, and a flow run on another
+7. **Check where data goes, then find or make a reset.** First read the
+   environment and config: which database, storage, email and payment
+   services will the flows write to? Local or a test instance: carry on.
+   Production, shared, or unknown: stop and report it (guide rule 9).
+   Flows change data, and a flow run on another
    flow's leftovers fails for the wrong reason. Find the command that puts
    data back to a known state (re-seed, test database, transaction
    rollback). If there is none, say so, log a tool gap, and plan for each

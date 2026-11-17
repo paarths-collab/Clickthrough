@@ -37,7 +37,8 @@ session with `uf-run`.
 1. **Start it for real.** Follow the README as a new user would: install,
    build, and run every part it needs (or install the package into a fresh
    project). If it does not start, say so and stop. Do not report anything
-   as working.
+   as working. Use a local or test database and services only; never
+   write test data to production or shared data.
 2. **List what you touched, as user goals.** In the user's words: "a
    customer resets their password", not "fixed reset handler". Add every
    other route to the same goal (see `uf-patterns`, section D).
