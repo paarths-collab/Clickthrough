@@ -67,6 +67,11 @@ flows, including flows that passed.
 |---|---|---|
 | | | |
 
+## Seen on the walk, not counted as failures
+
+<Things a user would find confusing or awkward that broke no flow: no
+confirmation, no undo, unlabelled fields. One line each, or "none".>
+
 ## Not verified
 
 | Flow or surface | Why | What would be needed |
@@ -76,3 +81,7 @@ flows, including flows that passed.
 ## Stubs and limits
 
 <Third-party services stubbed, things this run could not judge.>
+
+- Flaky flows (different result on rerun): <list or none>
+- Test defects found and fixed during this run: <list or none>
+- Test tooling added to the project: <packages and files, or none>

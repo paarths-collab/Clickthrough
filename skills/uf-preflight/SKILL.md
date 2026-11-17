@@ -51,6 +51,11 @@ Do them in order. Record the exact command and result for each.
    - a way to read server logs.
    Each one you lack goes in `.userflow/tool-gaps.md` with what it will stop
    you from checking.
+   If the project has no browser test tool, add one now (Playwright as a
+   dev dependency; keep its config and output inside `userflow-tests/`).
+   That is test tooling, not a product change. If its bundled browser does
+   not match what is on the machine, drive an installed browser (for
+   Playwright, `channel: 'chrome'`) before downloading anything.
 9. **Note what users need that you may not have:** test accounts for each
    role, email or SMS you cannot receive, third-party logins, payment test
    keys. List them now so later phases can mark those flows `blocked`

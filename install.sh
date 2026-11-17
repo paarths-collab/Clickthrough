@@ -72,13 +72,16 @@ for keep in flows.yaml tool-gaps.md; do
 done
 
 ignore="$project/.gitignore"
-if [ -f "$ignore" ] && grep -qxF '.userflow/runs/' "$ignore"; then
-  echo "ignore   -> .gitignore already has .userflow/runs/"
-else
-  if [ -s "$ignore" ] && [ -n "$(tail -c1 "$ignore")" ]; then printf '\n' >> "$ignore"; fi
-  printf '# user-flow QA run logs can contain secrets\n.userflow/runs/\n' >> "$ignore"
-  echo "ignore   -> added .userflow/runs/ to .gitignore"
-fi
+# Run logs can contain secrets; .results/ is the test tool's scratch output.
+for line in '.userflow/runs/' 'userflow-tests/.results/'; do
+  if [ -f "$ignore" ] && grep -qxF "$line" "$ignore"; then
+    echo "ignore   -> .gitignore already has $line"
+  else
+    if [ -s "$ignore" ] && [ -n "$(tail -c1 "$ignore")" ]; then printf '\n' >> "$ignore"; fi
+    printf '# user-flow QA\n%s\n' "$line" >> "$ignore"
+    echo "ignore   -> added $line to .gitignore"
+  fi
+done
 
 cat <<EOF
 

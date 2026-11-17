@@ -64,11 +64,17 @@ newest() { # prints the newest of the file paths given on stdin
 }
 
 collect_claude() {
-  local encoded dir file side
-  encoded="$(printf '%s' "$project" | sed 's/[^A-Za-z0-9]/-/g')"
-  dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/$encoded"
-  if [ ! -d "$dir" ]; then
-    echo "No Claude Code logs for this project at $dir" >&2
+  local encoded dir="" file side base candidate
+  base="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
+  # Claude Code names the folder after the path it was started in. Try the
+  # path as given and with symlinks resolved (on macOS /tmp is /private/tmp).
+  for candidate in "$project" "$(cd "$project" && pwd -P)"; do
+    encoded="$(printf '%s' "$candidate" | sed 's/[^A-Za-z0-9]/-/g')"
+    if [ -d "$base/$encoded" ]; then dir="$base/$encoded"; break; fi
+  done
+  if [ -z "$dir" ] && { [ -z "$session" ] || [ ! -f "$session" ]; }; then
+    echo "No Claude Code logs for this project at $base/$encoded" >&2
+    echo "If the session was started in another folder, or you are a subagent, pass --session <log file>." >&2
     return 1
   fi
   if [ -n "$session" ] && [ -f "$session" ]; then
@@ -152,5 +158,9 @@ if [ -n "$run_dir" ] && [ -f "$run_dir/run.json" ]; then
   sed "s/\"ended_at\": *[^,]*,/\"ended_at\": \"$now\",/" "$run_dir/run.json" > "$run_dir/run.json.new"
   mv "$run_dir/run.json.new" "$run_dir/run.json"
 fi
-echo "Raw logs are in $out"
+if [ "$status" = 0 ]; then
+  echo "Raw logs are in $out"
+else
+  echo "No session log was copied; $out is unchanged. Note this in decisions.md and carry on." >&2
+fi
 exit $status

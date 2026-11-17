@@ -1,0 +1,1036 @@
+# User-flow registry. Single source of truth for what a user can do with this
+# product and whether it has been shown to work. Check it with:
+#   python3 .userflow/bin/uf-check.py
+version: 1
+
+product:
+  name: "Tasklet"
+  # one paragraph: what the product is for, in plain words
+  purpose: >-
+    Tasklet is a small task tracker for small teams. A person signs up with
+    name, email and password and lands on their dashboard already logged in.
+    They create projects, add tasks to them (from the project page or the
+    dashboard quick-add box), tick tasks done (and they stay done), delete
+    tasks, see every task across their projects on My Tasks, invite teammates
+    by email from a Team page in the sidebar, change their display name in
+    Settings, log out and back in, and reset a forgotten password by email
+    from the login page. Nobody else can see a person's projects or tasks.
+  intent_sources: ["PRD.md", "README.md"]
+
+# How to run the real product. Filled in by uf-preflight.
+run:
+  install: "npm install"   # product has no runtime dependencies; installs the test-only devDependency @playwright/test
+  boot: "npm start"        # one command that starts the whole stack (static pages + API + SQLite in one node process)
+  seed: "npm run seed"
+  reset: "npm run reset"   # same script as seed: wipes every table (sessions too) and reloads demo data; works while the server is up
+  stop: "kill the `node server.js` process (no stop script exists)"
+  base_url: "http://localhost:4173"
+  test_command: "npx playwright test -c userflow-tests/playwright.config.js"   # Playwright + installed Chrome; product must be running; each test resets the data; set UF_EVIDENCE_DIR to keep screenshots
+  services:
+    - {name: web+api, check: "GET / returns 200 login page; entry page loads in Chrome via Playwright", logs: "stdout of npm start (captured in <run>/raw/server.log); requests are not logged"}
+    - {name: database, check: "sqlite3 -readonly tasklet.db 'select count(*) from users' = 3 after seed", logs: "none"}
+  stubs: []              # third-party services stubbed at the network edge, if any
+
+# Kinds of user. `auth` says how to become them (seeded account, sign-up, token).
+personas:
+  - {id: P1, name: "Owner", goal: "Run projects and tasks for a small team, invite teammates", auth: "alice@example.com / password123 (seeded: 2 projects, 4 tasks)"}
+  - {id: P2, name: "New user", goal: "Sign up and get started from nothing", auth: "sign up at /signup.html with a fresh email; or carol@example.com / password123 (seeded, no projects or tasks)"}
+  - {id: P3, name: "Another account holder", goal: "Use their own account; must never see someone else's projects or tasks", auth: "bob@example.com / password123 (seeded: 1 project, 1 task)"}
+#  - {id: P1, name: "Owner", goal: "Run projects for a small team", auth: "alice@example.com / seeded"}
+
+# Parts of the product, for working through a large product a piece at a time.
+areas:
+  - {id: A1, name: "Accounts (sign up, log in, log out, password reset, settings)", status: mapped}
+  - {id: A2, name: "Projects and tasks (dashboard, projects, project page, My Tasks)", status: mapped}
+  - {id: A3, name: "Team (invites)", status: mapped}
+#  - {id: A1, name: "Accounts", status: mapped}     # pending | mapped
+
+# Everything a user can touch.
+surfaces:
+  # ---- logged out ----------------------------------------------------------
+  - {id: S001, area: A1, type: page, name: "Login page", location: "/", source: both, personas: [P1, P2, P3], reach: "entry point: open the base URL (also where every signed-in page sends you when logged out)", leads_to: null, note: ""}
+  - {id: S002, area: A1, type: form, name: "Login form (email, password)", location: "/ #login", source: both, personas: [P1, P2, P3], reach: "login page", leads_to: null, note: "on success goes to /dashboard.html"}
+  - {id: S003, area: A1, type: notification, name: "Login error message", location: "/ #msg", source: both, personas: [P1, P2, P3], reach: "login page > submit wrong details", leads_to: null, note: "seen: 'Wrong email or password.'"}
+  - {id: S004, area: A1, type: action, name: "'Forgot password?' link", location: "/ a#forgot", source: both, personas: [P1, P2, P3], reach: "login page > Forgot password?", leads_to: null, note: "walk: clicking it changes the URL to /# and nothing else happens; no form, no message, no network call"}
+  - {id: S005, area: A1, type: notification, name: "Password reset email", location: "not found", source: intent, personas: [P1, P2, P3], reach: null, leads_to: null, note: "PRD: 'If you forget your password you can reset it by email from the login page.' Nothing in the UI walk or the code sends email or resets a password."}
+  - {id: S006, area: A1, type: page, name: "Sign-up page", location: "/signup.html", source: both, personas: [P2], reach: "login page > Create an account", leads_to: null, note: ""}
+  - {id: S007, area: A1, type: form, name: "Sign-up form (name, email, password 8+)", location: "/signup.html #signup", source: both, personas: [P2], reach: "login page > Create an account", leads_to: null, note: "PRD: lands on dashboard already logged in"}
+  - {id: S008, area: A1, type: notification, name: "Sign-up error message", location: "/signup.html #msg", source: code, personas: [P2], reach: "sign-up page > submit bad details", leads_to: null, note: "not promised in the PRD, sensible; server texts: valid email, 8+ password, email already registered"}
+  - {id: S009, area: A1, type: action, name: "'Log in' link on the sign-up page", location: "/signup.html", source: code, personas: [P2], reach: "sign-up page > Log in", leads_to: null, note: "goes back to the login page"}
+  # ---- sidebar (identical for every signed-in persona) ------------------------
+  - {id: S010, area: A2, type: nav, name: "Sidebar: Dashboard", location: "sidebar", source: both, personas: [P1, P2, P3], reach: "any signed-in page", leads_to: S020, note: ""}
+  - {id: S011, area: A2, type: nav, name: "Sidebar: Projects", location: "sidebar", source: both, personas: [P1, P2, P3], reach: "any signed-in page", leads_to: S030, note: ""}
+  - {id: S012, area: A2, type: nav, name: "Sidebar: My Tasks", location: "sidebar", source: both, personas: [P1, P2, P3], reach: "any signed-in page", leads_to: S050, note: ""}
+  - {id: S013, area: A2, type: nav, name: "Sidebar: Reports", location: "sidebar", source: code, personas: [P1, P2, P3], reach: "any signed-in page", leads_to: nowhere, note: "walk: opens /reports.html = bare 'Not found' (HTTP 404), no sidebar to get back. Never promised in the PRD; looks like a leftover or unfinished feature."}
+  - {id: S014, area: A1, type: nav, name: "Sidebar: Settings", location: "sidebar", source: both, personas: [P1, P2, P3], reach: "any signed-in page", leads_to: S060, note: ""}
+  - {id: S015, area: A1, type: nav, name: "Sidebar: Log out button", location: "sidebar button#logout", source: both, personas: [P1, P2, P3], reach: "any signed-in page", leads_to: S001, note: "walk: returns to login page; going back to /dashboard.html afterwards redirects to login"}
+  - {id: S016, area: A3, type: nav, name: "Sidebar: Team", location: "not found", source: intent, personas: [P1], reach: null, leads_to: nowhere, note: "PRD: 'Invite teammates by email from the Team page in the sidebar.' The sidebar has no Team item for any persona. (leads_to: nowhere because the item does not exist.)"}
+  - {id: S017, area: A1, type: notification, name: "'Signed in as <name>' in the sidebar", location: "sidebar #who-name", source: both, personas: [P1, P2, P3], reach: "any signed-in page", leads_to: null, note: "one of the places the display name shows"}
+  # ---- dashboard -------------------------------------------------------------
+  - {id: S020, area: A2, type: page, name: "Dashboard", location: "/dashboard.html", source: both, personas: [P1, P2, P3], reach: "after login; sidebar > Dashboard", leads_to: null, note: "heading 'Welcome back, <name>'; 'Your projects' list with open counts"}
+  - {id: S021, area: A2, type: form, name: "Quick add form (title, project select)", location: "/dashboard.html #quick", source: both, personas: [P1, P2, P3], reach: "Dashboard > Quick add", leads_to: null, note: "walk as carol: project select is empty when the user has no projects"}
+  - {id: S022, area: A2, type: notification, name: "Quick add result message", location: "/dashboard.html #msg", source: both, personas: [P1, P2, P3], reach: "Dashboard > Quick add > Add task", leads_to: null, note: "code: 'Task added!' or the server error"}
+  - {id: S023, area: A2, type: action, name: "Project link in 'Your projects' on the dashboard", location: "/dashboard.html #projects a", source: both, personas: [P1, P3], reach: "Dashboard > Your projects > row", leads_to: null, note: "opens the project page"}
+  - {id: S024, area: A2, type: page, name: "Dashboard empty state", location: "/dashboard.html #projects", source: both, personas: [P2], reach: "Dashboard, as a user with no projects", leads_to: null, note: "seen as carol: 'No projects yet. Create one on the Projects page.'"}
+  # ---- projects --------------------------------------------------------------
+  - {id: S030, area: A2, type: page, name: "Projects page (list of my projects)", location: "/projects.html", source: both, personas: [P1, P2, P3], reach: "sidebar > Projects", leads_to: null, note: "empty state seen as carol: 'No projects yet.'"}
+  - {id: S031, area: A2, type: form, name: "Create project form (name)", location: "/projects.html #new-project", source: both, personas: [P1, P2, P3], reach: "sidebar > Projects", leads_to: null, note: ""}
+  - {id: S032, area: A2, type: notification, name: "'A name is required' message on empty project name", location: "/projects.html #msg", source: intent, personas: [P1, P2, P3], reach: null, leads_to: null, note: "PRD promises it. Discovery probe: submitting an empty name shows no message; POST /api/projects answers 500 and the server logs 'CHECK constraint failed'."}
+  - {id: S033, area: A2, type: action, name: "Project link in the Projects list", location: "/projects.html #projects a", source: both, personas: [P1, P3], reach: "sidebar > Projects > row", leads_to: null, note: "opens the project page"}
+  # ---- project page ----------------------------------------------------------
+  - {id: S040, area: A2, type: page, name: "Project page (tasks of one project)", location: "/project.html?id=<n>", source: both, personas: [P1, P2, P3], reach: "sidebar > Projects > row; Dashboard > Your projects > row", leads_to: null, note: "code also has an empty state 'No tasks in this project yet.' and a 'Project not found' heading for an unknown id"}
+  - {id: S041, area: A2, type: form, name: "Add task form (title)", location: "/project.html #new-task", source: both, personas: [P1, P2, P3], reach: "project page", leads_to: null, note: ""}
+  - {id: S042, area: A2, type: action, name: "Tick a task (done checkbox)", location: "/project.html #tasks input[type=checkbox]", source: both, personas: [P1, P2, P3], reach: "project page > task row > checkbox", leads_to: null, note: "PRD: stays done when you come back"}
+  - {id: S043, area: A2, type: action, name: "Delete a task", location: "/project.html #tasks button", source: both, personas: [P1, P2, P3], reach: "project page > task row > Delete", leads_to: null, note: "no confirmation step"}
+  - {id: S044, area: A2, type: action, name: "'<- All projects' link", location: "/project.html", source: code, personas: [P1, P2, P3], reach: "project page > All projects", leads_to: null, note: "back to the Projects page"}
+  # ---- my tasks --------------------------------------------------------------
+  - {id: S050, area: A2, type: page, name: "My Tasks (every task across my projects)", location: "/my-tasks.html", source: both, personas: [P1, P2, P3], reach: "sidebar > My Tasks", leads_to: null, note: "read-only list: no checkbox, no delete, no link to the project"}
+  - {id: S051, area: A2, type: page, name: "My Tasks empty state ('no tasks yet')", location: "/my-tasks.html #tasks", source: both, personas: [P2], reach: "sidebar > My Tasks, as a user with no tasks", leads_to: null, note: "PRD promises a friendly 'no tasks yet' message. Walk as carol: page stays on 'Loading...' with a page error (GET /api/my-tasks -> 204, then JSON parse error). The text exists in the page code."}
+  # ---- settings --------------------------------------------------------------
+  - {id: S060, area: A1, type: page, name: "Settings page", location: "/settings.html", source: both, personas: [P1, P2, P3], reach: "sidebar > Settings", leads_to: null, note: ""}
+  - {id: S061, area: A1, type: form, name: "Display name form", location: "/settings.html #settings", source: both, personas: [P1, P2, P3], reach: "sidebar > Settings", leads_to: null, note: "PRD: new name shows everywhere and is still there next login"}
+  - {id: S062, area: A1, type: notification, name: "Settings result message", location: "/settings.html #msg", source: both, personas: [P1, P2, P3], reach: "sidebar > Settings > Save", leads_to: null, note: "seen: 'Name is required.' on empty name; code: 'Saved!'"}
+  # ---- team ------------------------------------------------------------------
+  - {id: S070, area: A3, type: page, name: "Team page (invite form + 'Invited' list)", location: "/team.html", source: both, personas: [P1], reach: none, leads_to: null, note: "Found only by reading the code. No sidebar item, link or button leads here; a user would have to type /team.html."}
+  - {id: S071, area: A3, type: form, name: "Invite teammate form (email)", location: "/team.html #invite", source: both, personas: [P1], reach: none, leads_to: null, note: "on the Team page, which has no way in"}
+  - {id: S072, area: A3, type: notification, name: "Invite result message", location: "/team.html #msg", source: both, personas: [P1], reach: "Team page > Send invite", leads_to: null, note: "code: 'Invite sent.' or the server error"}
+  - {id: S073, area: A3, type: notification, name: "Invite email to the teammate", location: "not found", source: intent, personas: [P1], reach: null, leads_to: null, note: "PRD: 'Invite teammates by email'. The code only stores a row in `invites`; nothing sends email and there is no way for the teammate to accept."}
+  # ---- API endpoints behind the pages (not a public API) -------------------------
+  - {id: S100, area: A1, type: endpoint, name: "POST /api/signup", location: "server.js", source: both, personas: [P2], note: "creates the user; does not start a session (seen in code - to be checked by the sign-up flow)"}
+  - {id: S101, area: A1, type: endpoint, name: "POST /api/login", location: "server.js", source: both, personas: [P1, P2, P3], note: "sets the sid cookie"}
+  - {id: S102, area: A1, type: endpoint, name: "POST /api/logout", location: "server.js", source: both, personas: [P1, P2, P3], note: "deletes all sessions of the user"}
+  - {id: S103, area: A1, type: endpoint, name: "GET /api/me", location: "server.js", source: both, personas: [P1, P2, P3], note: "every signed-in page calls it; 401 sends the browser to the login page"}
+  - {id: S104, area: A1, type: endpoint, name: "PUT /api/settings", location: "server.js", source: both, personas: [P1, P2, P3], note: ""}
+  - {id: S105, area: A2, type: endpoint, name: "GET /api/projects", location: "server.js", source: both, personas: [P1, P2, P3], note: ""}
+  - {id: S106, area: A2, type: endpoint, name: "POST /api/projects", location: "server.js", source: both, personas: [P1, P2, P3], note: ""}
+  - {id: S107, area: A2, type: endpoint, name: "GET /api/projects/:id/tasks", location: "server.js", source: both, personas: [P1, P2, P3], note: ""}
+  - {id: S108, area: A2, type: endpoint, name: "POST /api/tasks", location: "server.js", source: both, personas: [P1, P2, P3], note: "used by the project page and by quick add"}
+  - {id: S109, area: A2, type: endpoint, name: "GET /api/my-tasks", location: "server.js", source: both, personas: [P1, P2, P3], note: ""}
+  - {id: S110, area: A2, type: endpoint, name: "PATCH /api/tasks/:id (set done)", location: "server.js", source: both, personas: [P1, P2, P3], note: "walk + code: no page was seen calling it; to be checked by the tick flow"}
+  - {id: S111, area: A2, type: endpoint, name: "DELETE /api/tasks/:id", location: "server.js", source: both, personas: [P1, P2, P3], note: ""}
+  - {id: S112, area: A3, type: endpoint, name: "GET /api/team", location: "server.js", source: both, personas: [P1], note: ""}
+  - {id: S113, area: A3, type: endpoint, name: "POST /api/team/invite", location: "server.js", source: both, personas: [P1], note: ""}
+  - {id: S114, area: A1, type: endpoint, name: "GET /health", location: "server.js", source: code, personas: [], excluded: "operational health check, not something a user does; it answered 200 {ok:true} in preflight", note: "undocumented health check, answers {ok:true} without login"}
+  # ---- stored data -----------------------------------------------------------
+  - {id: S120, area: A1, type: data, name: "users table (email, name, password hash)", location: "tasklet.db", source: both, personas: [P1, P2, P3], note: ""}
+  - {id: S121, area: A1, type: data, name: "sessions table (sid, user_id)", location: "tasklet.db", source: both, personas: [P1, P2, P3], note: ""}
+  - {id: S122, area: A2, type: data, name: "projects table (owner_id, name)", location: "tasklet.db", source: both, personas: [P1, P2, P3], note: ""}
+  - {id: S123, area: A2, type: data, name: "tasks table (project_id, title, done)", location: "tasklet.db", source: both, personas: [P1, P2, P3], note: "project_id is nullable"}
+  - {id: S124, area: A3, type: data, name: "invites table (inviter_id, email)", location: "tasklet.db", source: both, personas: [P1], note: ""}
+# Schema example:
+#  - id: S001
+#    area: A1
+#    type: page           # nav | page | form | action | endpoint | mcp_tool | cli | job | notification | data
+#    name: "Projects page"
+#    location: "/projects.html"
+#    source: both         # intent | code | both   (intent = promised, not found; code = exists, never promised)
+#    personas: [P1]
+#    reach: "sidebar > Projects"   # how a user gets here by clicking; `none` = no way in
+#    leads_to: null       # nav items only: the surface id it opens, or `nowhere` if it is dead
+#    note: ""
+
+# What a user comes here to get done. One goal can have several routes.
+goals:
+  - {id: G01, title: "Create my account and get in", persona: P2}
+  - {id: G02, title: "Log in to my account", persona: P1}
+  - {id: G03, title: "Log out so nobody else can use my account", persona: P1}
+  - {id: G04, title: "Get back in when I forgot my password", persona: P1}
+  - {id: G05, title: "Create a project", persona: P1}
+  - {id: G06, title: "See my projects and open one", persona: P1}
+  - {id: G07, title: "Add a task to a project", persona: P1}
+  - {id: G08, title: "Tick a task off and have it stay done", persona: P1}
+  - {id: G09, title: "Delete a task I no longer need", persona: P1}
+  - {id: G10, title: "See all my tasks in one place", persona: P1}
+  - {id: G11, title: "Invite a teammate", persona: P1}
+  - {id: G12, title: "Change my display name", persona: P1}
+  - {id: G13, title: "Keep my projects and tasks private from everyone else", persona: P3}
+  - {id: G14, title: "Start using it with an empty account", persona: P2}
+  - {id: G15, title: "Find my way around from the sidebar", persona: P1}
+  - {id: G16, title: "Look at reports (offered in the sidebar, not in the PRD)", persona: P1}
+#  - {id: G01, title: "Add a task to a project", persona: P1}
+
+flows:
+  - id: F001
+    goal: G01
+    route: "sign-up page, from the link on the login page"
+    title: "New user signs up and lands on their dashboard, already logged in"
+    persona: P2
+    priority: P0
+    variant: normal
+    surfaces: [S001, S006, S007, S100, S103, S017, S020, S120, S121]
+    start: "login page, logged out"
+    preconditions: "seed data; no account for dana@example.com"
+    steps:
+      - {do: "Open the product", see: "Login page with a 'Create an account' link"}
+      - {do: "Click 'Create an account'", see: "Sign-up page with name, email and password fields"}
+      - {do: "Type name 'Dana', email 'dana@example.com', password 'correct-horse-9' and click 'Sign up'", see: "The dashboard, with 'Welcome back, Dana' and 'Signed in as Dana'"}
+    persisted: ["users row with email dana@example.com and name Dana", "a sessions row for that user"]
+    side_effects: []
+    test_file: "userflow-tests/F001-signup-lands-on-dashboard.test.js"
+    status: fail
+    failure_class: INTEGRATION
+    finding: "After clicking 'Sign up' the new user is dropped on the login page, not logged in, with no message. The account was created (sign-up answers 201 but starts no session; the dashboard's login check then gets 401)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F001/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F001-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F001-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F002
+    goal: G01
+    route: "sign-up page, from the link on the login page"
+    title: "New user tries to sign up with an email that is already registered and is told so"
+    persona: P2
+    priority: P1
+    variant: wrong_input
+    surfaces: [S006, S007, S008, S009, S100]
+    start: "login page, logged out"
+    preconditions: "seed data (alice@example.com exists)"
+    steps:
+      - {do: "Open the product and click 'Create an account'", see: "Sign-up page"}
+      - {do: "Type name 'Imposter', email 'alice@example.com', password 'correct-horse-9' and click 'Sign up'", see: "A message in words that the email is already registered; still on the sign-up page"}
+      - {do: "Click 'Log in'", see: "The login page"}
+    persisted: ["still exactly one users row for alice@example.com, name still Alice"]
+    side_effects: []
+    test_file: "userflow-tests/F002-signup-existing-email.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F002/final.png"]}
+
+  - id: F003
+    goal: G01
+    route: "sign-up page, from the link on the login page"
+    title: "New user picks a password that is too short and is told the rule"
+    persona: P2
+    priority: P2
+    variant: wrong_input
+    surfaces: [S006, S007, S008, S100]
+    start: "login page, logged out"
+    preconditions: "seed data; no account for erin@example.com"
+    steps:
+      - {do: "Open the product and click 'Create an account'", see: "Sign-up page; the password field says 8+ characters"}
+      - {do: "Type name 'Erin', email 'erin@example.com', password 'short' and click 'Sign up'", see: "A message in words that the password must be at least 8 characters; still on the sign-up page"}
+    persisted: ["no users row for erin@example.com"]
+    side_effects: []
+    test_file: "userflow-tests/F003-signup-short-password.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F003/final.png"]}
+
+  - id: F004
+    goal: G01
+    route: "login page, with the account made at sign-up"
+    title: "New user comes back later and logs in with the email and password they signed up with"
+    persona: P2
+    priority: P0
+    variant: return_visit
+    surfaces: [S001, S002, S006, S007, S100, S101, S020, S120]
+    start: "login page, logged out"
+    preconditions: "seed data; no account for dana@example.com"
+    steps:
+      - {do: "Open the product, click 'Create an account', sign up as 'Dana' / 'dana@example.com' / 'correct-horse-9'", see: "Sign-up is accepted (no error message)"}
+      - {do: "Close the browser. Open the product again in a fresh browser", see: "Login page"}
+      - {do: "Type 'dana@example.com' and 'correct-horse-9' and click 'Log in'", see: "The dashboard, with 'Welcome back, Dana'"}
+    persisted: ["users row with email dana@example.com and name Dana"]
+    side_effects: []
+    test_file: "userflow-tests/F004-signup-then-login-later.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F004/final.png", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F004-walk.png"]}
+
+  - id: F005
+    goal: G14
+    route: "dashboard empty state > Projects page > new project page"
+    title: "New user with nothing yet creates their first project and first task"
+    persona: P2
+    priority: P1
+    variant: empty
+    surfaces: [S002, S020, S024, S011, S030, S031, S033, S040, S041, S105, S106, S107, S108, S122, S123]
+    start: "login page, logged out"
+    preconditions: "seed data; carol@example.com has no projects and no tasks"
+    steps:
+      - {do: "Log in as carol@example.com", see: "Dashboard with 'No projects yet. Create one on the Projects page.'"}
+      - {do: "Click 'Projects' in the sidebar", see: "Projects page with 'No projects yet.'"}
+      - {do: "Type 'Garden' in 'Project name' and click 'Create project'", see: "'Garden' in the list with '0 open'"}
+      - {do: "Click 'Garden'", see: "Project page titled 'Garden' with 'No tasks in this project yet.'"}
+      - {do: "Type 'Buy seeds' in 'New task' and click 'Add task'", see: "'Buy seeds' in the task list, not ticked"}
+    persisted: ["projects row 'Garden' owned by carol", "tasks row 'Buy seeds' under that project, done = 0"]
+    side_effects: []
+    test_file: "userflow-tests/F005-new-user-first-project-and-task.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F005/final.png"]}
+
+  - id: F006
+    goal: G02
+    route: "login page"
+    title: "Owner logs in and sees their dashboard with their projects"
+    persona: P1
+    priority: P0
+    variant: normal
+    surfaces: [S001, S002, S101, S103, S105, S017, S020, S121]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Open the product", see: "Login page"}
+      - {do: "Type 'alice@example.com' and 'password123' and click 'Log in'", see: "Dashboard with 'Welcome back, Alice', 'Signed in as Alice', and 'Your projects' listing 'Website relaunch' (2 open) and 'Hiring' (1 open)"}
+    persisted: ["a sessions row for alice"]
+    side_effects: []
+    test_file: "userflow-tests/F006-login.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F006/final.png", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F006-walk.png"]}
+
+  - id: F007
+    goal: G02
+    route: "login page"
+    title: "Owner types the wrong password and is told, without getting in"
+    persona: P1
+    priority: P1
+    variant: wrong_input
+    surfaces: [S001, S002, S003, S101]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Open the product, type 'alice@example.com' and 'not-my-password', click 'Log in'", see: "'Wrong email or password.' and still on the login page"}
+      - {do: "Type the right password 'password123' and click 'Log in'", see: "Dashboard with 'Welcome back, Alice'"}
+    persisted: ["no sessions row after the wrong attempt"]
+    side_effects: []
+    test_file: "userflow-tests/F007-login-wrong-password.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F007/final.png"]}
+
+  - id: F008
+    goal: G03
+    route: "sidebar > Log out"
+    title: "Owner logs out and the account is closed to whoever uses the browser next"
+    persona: P1
+    priority: P1
+    variant: normal
+    surfaces: [S015, S102, S001, S121]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com", see: "Dashboard"}
+      - {do: "Click 'Log out' in the sidebar", see: "Login page"}
+      - {do: "Open the dashboard address again in the same browser", see: "Login page again, not the dashboard"}
+    persisted: ["no sessions row left for alice"]
+    side_effects: []
+    test_file: "userflow-tests/F008-logout.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F008/final.png"]}
+
+  - id: F009
+    goal: G04
+    route: "login page > Forgot password?"
+    title: "Owner who forgot their password resets it by email from the login page"
+    persona: P1
+    priority: P1
+    variant: normal
+    surfaces: [S001, S004, S005]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Open the product and click 'Forgot password?'", see: "A way to ask for a reset: a field for my email, or a message saying a reset email is on its way"}
+      - {do: "Give 'alice@example.com' and ask for the reset", see: "Confirmation that an email was sent"}
+      - {do: "Open the email, follow it, choose a new password, log in with it", see: "Dashboard with 'Welcome back, Alice'"}
+    persisted: ["alice's stored password changed"]
+    side_effects: ["password reset email to alice@example.com"]
+    test_file: "userflow-tests/F009-forgot-password.test.js"
+    status: fail
+    failure_class: MISSING_FEATURE
+    finding: "'Forgot password?' does nothing: no form, no message, no request. There is no way to reset a password."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F009/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F009-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F009-walk.png"]}
+
+  - id: F010
+    goal: G05
+    route: "sidebar > Projects > Create project"
+    title: "Owner creates a project and sees it in their lists"
+    persona: P1
+    priority: P0
+    variant: normal
+    surfaces: [S011, S030, S031, S106, S105, S010, S020, S122]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com", see: "Dashboard"}
+      - {do: "Click 'Projects' in the sidebar", see: "Projects page listing 'Website relaunch' and 'Hiring'"}
+      - {do: "Type 'Q3 planning' in 'Project name' and click 'Create project'", see: "'Q3 planning' appears in the list with '0 open'; the name field is cleared"}
+      - {do: "Click 'Dashboard' in the sidebar", see: "'Q3 planning' under 'Your projects' and as a choice in the Quick add project list"}
+    persisted: ["projects row 'Q3 planning' owned by alice (exactly one)"]
+    side_effects: []
+    test_file: "userflow-tests/F010-create-project.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F010/final.png", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F010-walk.png"]}
+
+  - id: F011
+    goal: G05
+    route: "sidebar > Projects > Create project"
+    title: "Owner leaves the project name empty and is told a name is required"
+    persona: P1
+    priority: P1
+    variant: wrong_input
+    surfaces: [S030, S031, S032, S106]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com and click 'Projects' in the sidebar", see: "Projects page"}
+      - {do: "Leave 'Project name' empty and click 'Create project'", see: "A message in words that a name is required; the list is unchanged"}
+    persisted: ["still exactly 2 projects rows for alice"]
+    side_effects: []
+    test_file: "userflow-tests/F011-create-project-empty-name.test.js"
+    status: fail
+    failure_class: SOFTWARE_BUG
+    finding: "Creating a project with an empty name shows nothing at all. The server answers 500 ('CHECK constraint failed' in its log) and the page ignores it. No project is created."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F011/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F011-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F011-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F012
+    goal: G05
+    route: "sidebar > Projects > Create project"
+    title: "Owner double-clicks 'Create project' and still gets one project"
+    persona: P1
+    priority: P2
+    variant: interrupted
+    surfaces: [S030, S031, S106, S122]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com and click 'Projects' in the sidebar", see: "Projects page"}
+      - {do: "Type 'Offsite' in 'Project name' and double-click 'Create project'", see: "'Offsite' appears in the list exactly once"}
+    persisted: ["exactly one projects row 'Offsite' owned by alice"]
+    side_effects: []
+    test_file: "userflow-tests/F012-create-project-double-click.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "Double-clicking 'Create project' creates two identical projects."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F012/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F012-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F012-walk.png"]}
+
+  - id: F013
+    goal: G06
+    route: "sidebar > Projects > row"
+    title: "Owner sees their projects on the Projects page and opens one"
+    persona: P1
+    priority: P1
+    variant: normal
+    surfaces: [S011, S030, S033, S040, S044, S105, S107]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com and click 'Projects' in the sidebar", see: "'Website relaunch' with '2 open' and 'Hiring' with '1 open'; nothing else"}
+      - {do: "Click 'Hiring'", see: "Project page titled 'Hiring' with the task 'Post the job ad', not ticked"}
+      - {do: "Click '← All projects'", see: "The Projects page again"}
+    persisted: []
+    side_effects: []
+    test_file: "userflow-tests/F013-open-project-from-projects-page.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F013/final.png"]}
+
+  - id: F014
+    goal: G06
+    route: "Dashboard > Your projects > row"
+    title: "Owner opens a project from the dashboard list"
+    persona: P1
+    priority: P1
+    variant: normal
+    surfaces: [S020, S023, S040, S105, S107]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com", see: "Dashboard with 'Your projects': 'Website relaunch' (2 open), 'Hiring' (1 open)"}
+      - {do: "Click 'Website relaunch'", see: "Project page titled 'Website relaunch' with 'Write homepage copy', 'Pick a colour palette' (ticked) and 'Book photographer'"}
+    persisted: []
+    side_effects: []
+    test_file: "userflow-tests/F014-open-project-from-dashboard.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F014/final.png"]}
+
+  - id: F015
+    goal: G07
+    route: "project page > Add task"
+    title: "Owner adds a task from the project page"
+    persona: P1
+    priority: P0
+    variant: normal
+    surfaces: [S011, S030, S033, S040, S041, S108, S107, S012, S050, S109, S123]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com, click 'Projects', click 'Website relaunch'", see: "Project page with 3 tasks"}
+      - {do: "Type 'Draft press release' in 'New task' and click 'Add task'", see: "'Draft press release' at the end of the list, not ticked; the field is cleared"}
+      - {do: "Click 'My Tasks' in the sidebar", see: "'Draft press release' listed with 'Website relaunch' beside it"}
+    persisted: ["tasks row 'Draft press release' under project 'Website relaunch', done = 0 (exactly one)"]
+    side_effects: []
+    test_file: "userflow-tests/F015-add-task-project-page.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F015/final.png", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F015-walk.png"]}
+
+  - id: F016
+    goal: G07
+    route: "Dashboard > Quick add"
+    title: "Owner adds a task from the quick-add box on the dashboard"
+    persona: P1
+    priority: P0
+    variant: normal
+    surfaces: [S020, S021, S022, S023, S108, S040, S107, S012, S050, S123]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com", see: "Dashboard with the Quick add box"}
+      - {do: "Type 'Call the recruiter' in 'What needs doing?', choose 'Hiring', click 'Add task'", see: "'Task added!'"}
+      - {do: "Click 'Hiring' under 'Your projects'", see: "Project page 'Hiring' listing 'Call the recruiter', not ticked"}
+      - {do: "Click 'My Tasks' in the sidebar", see: "'Call the recruiter' listed with 'Hiring' beside it"}
+    persisted: ["tasks row 'Call the recruiter' under project 'Hiring', done = 0"]
+    side_effects: []
+    test_file: "userflow-tests/F016-add-task-dashboard-quick-add.test.js"
+    status: fail
+    failure_class: INTEGRATION
+    finding: "Quick add says 'Task added!' but the task is in no project and not on My Tasks (page sends `projectId`, server reads `project_id`; the task is saved with no project)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F016/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F016-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F016-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F017
+    goal: G07
+    route: "project page > Add task"
+    title: "Owner submits a task title that is only spaces and is told a title is needed"
+    persona: P1
+    priority: P2
+    variant: wrong_input
+    surfaces: [S040, S041, S108]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com, click 'Projects', click 'Hiring'", see: "Project page 'Hiring' with 1 task"}
+      - {do: "Type three spaces in 'New task' and click 'Add task'", see: "A message in words that a title is required; the list still has 1 task"}
+    persisted: ["still exactly 1 tasks row under 'Hiring'"]
+    side_effects: []
+    test_file: "userflow-tests/F017-add-task-blank-title.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "A task title of only spaces is refused silently: nothing changes and no message (server answers 400 'Title is required.', the page never shows it)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F017/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F017-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F017-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F018
+    goal: G07
+    route: "project page > Add task"
+    title: "Owner adds a task, refreshes the page, and the task is there once"
+    persona: P1
+    priority: P1
+    variant: interrupted
+    surfaces: [S040, S041, S108, S107, S123]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com, click 'Projects', click 'Hiring'", see: "Project page 'Hiring'"}
+      - {do: "Type 'Shortlist candidates' in 'New task', click 'Add task', then refresh the page", see: "Still logged in on 'Hiring'; 'Shortlist candidates' is listed exactly once"}
+    persisted: ["exactly one tasks row 'Shortlist candidates' under 'Hiring'"]
+    side_effects: []
+    test_file: "userflow-tests/F018-add-task-then-refresh.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F018/final.png"]}
+
+  - id: F019
+    goal: G07
+    route: "Dashboard > Quick add"
+    title: "New user with no projects tries quick add and is not left with a lost task"
+    persona: P2
+    priority: P1
+    variant: empty
+    surfaces: [S020, S021, S022, S024, S108, S012, S050, S123]
+    start: "login page, logged out"
+    preconditions: "seed data; carol@example.com has no projects"
+    steps:
+      - {do: "Log in as carol@example.com", see: "Dashboard; Quick add has no project to choose"}
+      - {do: "Type 'Plan my week' in 'What needs doing?' and click 'Add task'", see: "Either I am told to create a project first, or the task is saved somewhere I can find it (My Tasks). Not 'Task added!' followed by the task being nowhere."}
+    persisted: ["no tasks row without a project (a task no page can show)"]
+    side_effects: []
+    test_file: "userflow-tests/F019-quick-add-no-projects.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "A new user with no projects uses Quick add, sees 'Task added!', and the task is saved with no project and shown nowhere."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F019/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F019-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F019-walk.png"]}
+
+  - id: F020
+    goal: G08
+    route: "project page > task checkbox"
+    title: "Owner ticks a task done"
+    persona: P1
+    priority: P0
+    variant: normal
+    surfaces: [S040, S042, S110, S011, S030, S123]
+    start: "login page, logged out"
+    preconditions: "seed data ('Write homepage copy' is not done)"
+    steps:
+      - {do: "Log in as alice@example.com, click 'Projects', click 'Website relaunch'", see: "'Write homepage copy' not ticked"}
+      - {do: "Tick 'Write homepage copy'", see: "It is ticked and shown as done"}
+      - {do: "Click 'Projects' in the sidebar", see: "'Website relaunch' now shows '1 open' (was 2)"}
+    persisted: ["tasks row 'Write homepage copy' has done = 1"]
+    side_effects: []
+    test_file: "userflow-tests/F020-tick-task.test.js"
+    status: fail
+    failure_class: INTEGRATION
+    finding: "Ticking a task looks done on screen but is not saved: the open count does not change and the tick is gone when the project is reopened (page calls POST /api/tasks/<id>/complete, which answers 404; the server only has PATCH /api/tasks/<id>)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F020/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F020-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F020-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F021
+    goal: G08
+    route: "project page > task checkbox"
+    title: "Owner unticks a task that was marked done by mistake"
+    persona: P1
+    priority: P1
+    variant: alternate
+    surfaces: [S040, S042, S110, S123]
+    start: "login page, logged out"
+    preconditions: "seed data ('Pick a colour palette' is done)"
+    steps:
+      - {do: "Log in as alice@example.com, click 'Projects', click 'Website relaunch'", see: "'Pick a colour palette' is ticked"}
+      - {do: "Untick 'Pick a colour palette', then refresh the page", see: "'Pick a colour palette' is not ticked"}
+    persisted: ["tasks row 'Pick a colour palette' has done = 0"]
+    side_effects: []
+    test_file: "userflow-tests/F021-untick-task.test.js"
+    status: fail
+    failure_class: INTEGRATION
+    finding: "Unticking a done task is not saved; it is ticked again after a refresh (same missing route as F020)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F021/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F021-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F021-walk.png"]}
+
+  - id: F022
+    goal: G08
+    route: "project page > task checkbox"
+    title: "Owner ticks a task, leaves, comes back later, and it is still done"
+    persona: P1
+    priority: P0
+    variant: return_visit
+    surfaces: [S040, S042, S110, S015, S002, S123]
+    start: "login page, logged out"
+    preconditions: "seed data ('Post the job ad' is not done)"
+    steps:
+      - {do: "Log in as alice@example.com, click 'Projects', click 'Hiring'", see: "'Post the job ad' not ticked"}
+      - {do: "Tick 'Post the job ad', then click 'Log out'", see: "Login page"}
+      - {do: "In a fresh browser, log in as alice@example.com, click 'Projects', click 'Hiring'", see: "'Post the job ad' is still ticked"}
+    persisted: ["tasks row 'Post the job ad' has done = 1"]
+    side_effects: []
+    test_file: "userflow-tests/F022-tick-stays-done-on-return.test.js"
+    status: fail
+    failure_class: INTEGRATION
+    finding: "A task ticked before logging out is unticked when the user comes back (the tick was never saved; same missing route as F020)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F022/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F022-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F022-walk.png"]}
+
+  - id: F023
+    goal: G09
+    route: "project page > task row > Delete"
+    title: "Owner deletes a task"
+    persona: P1
+    priority: P1
+    variant: normal
+    surfaces: [S040, S043, S111, S012, S050, S123]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com, click 'Projects', click 'Website relaunch'", see: "3 tasks including 'Book photographer'"}
+      - {do: "Click 'Delete' beside 'Book photographer'", see: "'Book photographer' is gone; the other 2 tasks remain"}
+      - {do: "Click 'My Tasks' in the sidebar", see: "'Book photographer' is not listed"}
+    persisted: ["no tasks row 'Book photographer'; the other 4 seeded tasks still exist"]
+    side_effects: []
+    test_file: "userflow-tests/F023-delete-task.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F023/final.png"]}
+
+  - id: F024
+    goal: G10
+    route: "sidebar > My Tasks"
+    title: "Owner sees every task across their projects on My Tasks"
+    persona: P1
+    priority: P1
+    variant: normal
+    surfaces: [S012, S050, S109]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com and click 'My Tasks' in the sidebar", see: "Exactly 4 tasks: 'Write homepage copy', 'Book photographer', 'Pick a colour palette' (each with 'Website relaunch') and 'Post the job ad' (with 'Hiring'); 'Pick a colour palette' shown as done; nothing of Bob's"}
+    persisted: []
+    side_effects: []
+    test_file: "userflow-tests/F024-my-tasks.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F024/final.png"]}
+
+  - id: F025
+    goal: G10
+    route: "sidebar > My Tasks"
+    title: "New user with no tasks sees a friendly 'no tasks yet' message on My Tasks"
+    persona: P2
+    priority: P1
+    variant: empty
+    surfaces: [S012, S050, S051, S109]
+    start: "login page, logged out"
+    preconditions: "seed data; carol@example.com has no tasks"
+    steps:
+      - {do: "Log in as carol@example.com and click 'My Tasks' in the sidebar", see: "A friendly message that there are no tasks yet; no error, not stuck on 'Loading…'"}
+    persisted: []
+    side_effects: []
+    test_file: "userflow-tests/F025-my-tasks-empty.test.js"
+    status: fail
+    failure_class: SOFTWARE_BUG
+    finding: "My Tasks for a user with no tasks stays on 'Loading\u2026' forever, with a page error (server answers 204 with no body, the page tries to read it as JSON). The promised 'no tasks yet' message never shows."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F025/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F025-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F025-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F026
+    goal: G11
+    route: "sidebar > Team"
+    title: "Owner invites a teammate from the Team page in the sidebar"
+    persona: P1
+    priority: P1
+    variant: normal
+    surfaces: [S016, S070, S071, S072, S113, S124]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com", see: "Dashboard with a sidebar that has a 'Team' item"}
+      - {do: "Click 'Team' in the sidebar", see: "Team page with an invite form"}
+      - {do: "Type 'erin@example.com' and click 'Send invite'", see: "Confirmation that the invite was sent; 'erin@example.com' under 'Invited'"}
+    persisted: ["invites row for erin@example.com from alice"]
+    side_effects: ["invite email to erin@example.com"]
+    test_file: "userflow-tests/F026-invite-from-sidebar.test.js"
+    status: fail
+    failure_class: MISSING_FEATURE
+    finding: "There is no 'Team' item in the sidebar or anywhere else, so an owner cannot find how to invite a teammate (a Team page exists at /team.html but nothing links to it)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F026/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F026-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F026-walk.png"]}
+
+  - id: F027
+    goal: G11
+    route: "typing the address /team.html (the page has no way in from the UI)"
+    title: "Owner who knows the Team page address invites a teammate there"
+    persona: P1
+    priority: P2
+    variant: alternate
+    surfaces: [S070, S071, S072, S112, S113, S124]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com", see: "Dashboard"}
+      - {do: "Type the address /team.html", see: "Team page with an invite form and 'Nobody invited yet.'"}
+      - {do: "Type 'erin@example.com' and click 'Send invite'", see: "'Invite sent.' and 'erin@example.com' under 'Invited'"}
+      - {do: "Refresh the page", see: "'erin@example.com' still under 'Invited'"}
+    persisted: ["exactly one invites row for erin@example.com from alice"]
+    side_effects: []
+    test_file: "userflow-tests/F027-invite-by-typed-address.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F027/final.png"]}
+
+  - id: F028
+    goal: G11
+    route: "invite email to the teammate"
+    title: "Invited teammate receives the invite by email and can act on it"
+    persona: P1
+    priority: P1
+    variant: handoff
+    surfaces: [S071, S073, S113]
+    start: "login page, logged out (owner); the teammate's mailbox"
+    preconditions: "seed data; a mailbox for erin@example.com that the tester can read"
+    steps:
+      - {do: "As the owner, send an invite to 'erin@example.com'", see: "Confirmation that the invite was sent"}
+      - {do: "As Erin, open my mailbox", see: "An email from Tasklet inviting me, with a way to join"}
+    persisted: ["invites row for erin@example.com"]
+    side_effects: ["invite email to erin@example.com"]
+    test_file: null      # no test: nothing in this environment can receive email
+    status: blocked
+    failure_class: TOOL_GAP
+    finding: "Could not check whether an invited teammate ever receives an email: no mailbox or mail catcher exists and the product documents no mail setup."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: []}
+
+  - id: F029
+    goal: G12
+    route: "sidebar > Settings"
+    title: "Owner changes their display name and sees it everywhere"
+    persona: P1
+    priority: P1
+    variant: normal
+    surfaces: [S014, S060, S061, S062, S104, S017, S010, S020, S120]
+    start: "login page, logged out"
+    preconditions: "seed data (alice's name is 'Alice')"
+    steps:
+      - {do: "Log in as alice@example.com and click 'Settings' in the sidebar", see: "Settings page with 'Display name' showing 'Alice'"}
+      - {do: "Change it to 'Alice Smith' and click 'Save'", see: "'Saved!' and the sidebar says 'Signed in as Alice Smith'"}
+      - {do: "Click 'Dashboard' in the sidebar", see: "'Welcome back, Alice Smith' and 'Signed in as Alice Smith'"}
+    persisted: ["users row for alice@example.com has name 'Alice Smith'; bob and carol unchanged"]
+    side_effects: []
+    test_file: "userflow-tests/F029-change-display-name.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "Changing the display name shows 'Saved!' and the new name in the sidebar, but the next page shows the old name: nothing was saved (server.js:80 binds the user id and the name the wrong way round)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F029/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F029-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F029-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F030
+    goal: G12
+    route: "sidebar > Settings"
+    title: "Owner clears the display name and is told a name is required"
+    persona: P1
+    priority: P2
+    variant: wrong_input
+    surfaces: [S060, S061, S062, S104]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com and click 'Settings' in the sidebar", see: "Settings page"}
+      - {do: "Empty 'Display name' and click 'Save'", see: "'Name is required.'; the sidebar still says 'Signed in as Alice'"}
+    persisted: ["users row for alice still has name 'Alice'"]
+    side_effects: []
+    test_file: "userflow-tests/F030-display-name-empty.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F030/final.png"]}
+
+  - id: F031
+    goal: G12
+    route: "sidebar > Settings"
+    title: "Owner changes their display name, and it is still there next time they log in"
+    persona: P1
+    priority: P1
+    variant: return_visit
+    surfaces: [S060, S061, S104, S015, S002, S017, S020, S120]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com, click 'Settings', change 'Display name' to 'Alice Smith', click 'Save'", see: "'Saved!'"}
+      - {do: "Click 'Log out'", see: "Login page"}
+      - {do: "In a fresh browser, log in as alice@example.com", see: "'Welcome back, Alice Smith' and 'Signed in as Alice Smith'"}
+    persisted: ["users row for alice@example.com has name 'Alice Smith'"]
+    side_effects: []
+    test_file: "userflow-tests/F031-display-name-next-login.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "A changed display name is gone at the next login (never saved; same cause as F029)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F031/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F031-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F031-walk.png"]}
+
+  - id: F032
+    goal: G13
+    route: "own account: Dashboard, Projects, My Tasks"
+    title: "Another account holder logs in and sees only their own projects and tasks"
+    persona: P3
+    priority: P0
+    variant: normal
+    surfaces: [S002, S020, S011, S030, S012, S050, S105, S109, S122, S123]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as bob@example.com", see: "Dashboard 'Welcome back, Bob' listing only 'Bob private plans'"}
+      - {do: "Click 'Projects' in the sidebar", see: "Only 'Bob private plans' (1 open); no 'Website relaunch', no 'Hiring'"}
+      - {do: "Click 'My Tasks' in the sidebar", see: "Only 'Negotiate my raise'; none of Alice's tasks"}
+    persisted: []
+    side_effects: []
+    test_file: "userflow-tests/F032-bob-sees-only-own.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F032/final.png", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F032-walk.png"]}
+
+  - id: F033
+    goal: G13
+    route: "changing the project number in the address"
+    title: "Another account holder cannot open someone else's project by changing the address"
+    persona: P3
+    priority: P0
+    variant: not_allowed
+    surfaces: [S040, S107]
+    start: "login page, logged out"
+    preconditions: "seed data (project 1 'Website relaunch' belongs to alice; project 3 belongs to bob)"
+    steps:
+      - {do: "Log in as bob@example.com, click 'Projects', click 'Bob private plans'", see: "My project page; the address ends in id=3"}
+      - {do: "Change the address to id=1", see: "'Project not found' or a refusal. Not 'Website relaunch' and not Alice's tasks"}
+    persisted: []
+    side_effects: []
+    test_file: "userflow-tests/F033-bob-cannot-open-alice-project.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "Bob opens Alice's project and reads all her tasks by changing the number in the address (GET /api/projects/1/tasks answers 200 to any logged-in user)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F033/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F033-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F033-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F034
+    goal: G13
+    route: "changing the project number in the address, then using the page"
+    title: "Another account holder cannot add tasks to someone else's project"
+    persona: P3
+    priority: P0
+    variant: not_allowed
+    surfaces: [S040, S041, S108, S123]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as bob@example.com, click 'Projects', click 'Bob private plans', change the address to id=1", see: "No working 'Add task' for Alice's project"}
+      - {do: "If the form is there: type 'Bob was here' and click 'Add task'", see: "The task is refused"}
+      - {do: "Log in as alice@example.com in a fresh browser, click 'Projects', click 'Website relaunch'", see: "Alice's project has only her own 3 tasks"}
+    persisted: ["no tasks row 'Bob was here' under project 'Website relaunch'"]
+    side_effects: []
+    test_file: "userflow-tests/F034-bob-cannot-add-task-to-alice-project.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "Bob adds a task to Alice's project; Alice then finds 'Bob was here' in her list (POST /api/tasks does not check who owns the project)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F034/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F034-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F034-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F035
+    goal: G13
+    route: "typing a signed-in page's address while logged out"
+    title: "Someone who is not logged in cannot see any project or task"
+    persona: P2
+    priority: P0
+    variant: not_allowed
+    surfaces: [S001, S020, S030, S040, S050, S103]
+    start: "a fresh browser, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Type the dashboard address", see: "The login page; no names, projects or tasks"}
+      - {do: "Type the Projects, My Tasks and project (id=1) addresses in turn", see: "The login page each time; no project or task titles at any point"}
+    persisted: []
+    side_effects: []
+    test_file: "userflow-tests/F035-logged-out-sees-nothing.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F035/final.png", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F035-walk.png"]}
+
+  - id: F036
+    goal: G13
+    route: "own account, second visit"
+    title: "Another account holder comes back later and still has their own data, and only theirs"
+    persona: P3
+    priority: P2
+    variant: return_visit
+    surfaces: [S002, S015, S020, S040, S041, S108, S012, S050]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as bob@example.com, click 'Projects', click 'Bob private plans', add the task 'Update my CV', click 'Log out'", see: "Login page"}
+      - {do: "In a fresh browser, log in as bob@example.com and click 'My Tasks'", see: "Exactly 'Negotiate my raise' and 'Update my CV', both under 'Bob private plans'"}
+    persisted: ["tasks row 'Update my CV' under 'Bob private plans'"]
+    side_effects: []
+    test_file: "userflow-tests/F036-bob-returns.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F036/final.png"]}
+
+  - id: F037
+    goal: G15
+    route: "sidebar"
+    title: "Owner moves between Dashboard, Projects, My Tasks and Settings from the sidebar"
+    persona: P1
+    priority: P1
+    variant: normal
+    surfaces: [S010, S011, S012, S014, S020, S030, S050, S060]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com", see: "Dashboard; sidebar item 'Dashboard' is highlighted"}
+      - {do: "Click 'Projects', then 'My Tasks', then 'Settings', then 'Dashboard' in the sidebar", see: "Each time the page with that heading opens, the clicked item is highlighted, the sidebar is still there, and no error appears"}
+    persisted: []
+    side_effects: []
+    test_file: "userflow-tests/F037-sidebar-navigation.test.js"
+    status: pass
+    failure_class: null
+    finding: ""
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F037/final.png"]}
+
+  - id: F038
+    goal: G16
+    route: "sidebar > Reports"
+    title: "Owner opens Reports from the sidebar"
+    persona: P1
+    priority: P2
+    variant: normal
+    surfaces: [S013]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com and click 'Reports' in the sidebar", see: "A Reports page inside the app (sidebar still there), or at least no dead end"}
+    persisted: []
+    side_effects: []
+    test_file: "userflow-tests/F038-reports.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "'Reports' in the sidebar opens a bare white 'Not found' page with no sidebar and no way back (/reports.html does not exist, 404)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F038/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F038-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F038-walk.png"]}
+
+  - id: F039
+    goal: G13
+    route: "changing the project number in the address, then using the task rows"
+    title: "Another account holder cannot delete or tick someone else's tasks"
+    persona: P3
+    priority: P0
+    variant: not_allowed
+    surfaces: [S040, S042, S043, S110, S111, S123]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as bob@example.com, click 'Projects', click 'Bob private plans', change the address to id=1", see: "No task rows of Alice's to act on"}
+      - {do: "If the rows are there: click 'Delete' beside 'Book photographer' and tick 'Write homepage copy'", see: "A refusal in words; nothing changes"}
+      - {do: "Log in as alice@example.com in a fresh browser, click 'Projects', click 'Website relaunch'", see: "All 3 of Alice's tasks, 'Write homepage copy' not ticked"}
+    persisted: ["the 3 seeded tasks rows of 'Website relaunch' are unchanged"]
+    side_effects: []
+    test_file: "userflow-tests/F039-bob-cannot-change-alice-tasks.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "Alice's tasks were NOT changed (delete and tick are refused with 404). But Bob is shown her rows with Delete and checkboxes, gets no refusal in words, and the tick even looks done on his screen."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F039/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F039-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F039-walk.png", ".userflow/runs/20261117T081226Z-539f506/evidence/cause/requests-and-responses.txt"]}
+
+  - id: F040
+    goal: G12
+    route: "sidebar > Settings"
+    title: "Owner picks a display name that is just a number, and only their own name changes"
+    persona: P1
+    priority: P1         # raised from P2 after the run: the effect lands on another user's account
+    variant: alternate
+    surfaces: [S060, S061, S062, S104, S120]
+    start: "login page, logged out"
+    preconditions: "seed data"
+    steps:
+      - {do: "Log in as alice@example.com and click 'Settings' in the sidebar", see: "Settings page with 'Display name' showing 'Alice'"}
+      - {do: "Change it to '2' and click 'Save'", see: "'Saved!'"}
+      - {do: "As bob@example.com in a fresh browser, log in", see: "'Welcome back, Bob' - Bob's name is untouched"}
+    persisted: ["users row for alice has name '2'; bob is still 'Bob', carol is still 'Carol'"]
+    side_effects: []
+    test_file: "userflow-tests/F040-display-name-number.test.js"
+    status: fail
+    failure_class: FLOW_BROKEN
+    finding: "Alice sets her display name to '2': she sees 'Saved!', her own name does not change, and Bob (user id 2) is renamed to '1.0' (same swapped values as F029)."
+    last_run: {commit: "539f506ec50be7be1882a80ac363ffb0bbfc28fa", run_id: "20261117T081226Z-539f506", evidence: [".userflow/runs/20261117T081226Z-539f506/evidence/test-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/F040/failure.png", ".userflow/runs/20261117T081226Z-539f506/evidence/rerun/F040-output.txt", ".userflow/runs/20261117T081226Z-539f506/evidence/walk/F040-walk.png"]}
+
+# Schema example:
+#  - id: F001
+#    goal: G01
+#    route: "from the project page"    # which way of reaching the goal this flow covers
+#    title: "Owner adds a task from the project page"
+#    persona: P1
+#    priority: P0         # P0 = product is useless without it | P1 = important | P2 = nice to have
+#    variant: normal      # normal | alternate | wrong_input | not_allowed | interrupted | empty | return_visit | handoff
+#    surfaces: [S001]
+#    start: "login page"
+#    preconditions: "logged out; seeded account exists"
+#    steps:
+#      - {do: "Log in as the owner", see: "Dashboard with my name"}
+#      - {do: "Click Projects in the sidebar", see: "List of my projects"}
+#    persisted: ["tasks row with this title under this project"]
+#    side_effects: []
+#    test_file: "userflow-tests/F001-add-task-project-page.test.js"
+#    status: untested     # untested | pass | fail | unverified | blocked
+#    failure_class: null  # FLOW_BROKEN | SOFTWARE_BUG | INTEGRATION | MISSING_FEATURE | ENV_BLOCKED | TEST_DEFECT | TOOL_GAP
+#    finding: ""          # one line: what the user experiences
+#    last_run: {commit: "", run_id: "", evidence: []}

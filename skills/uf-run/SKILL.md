@@ -16,8 +16,9 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
 1. **Are you the builder?** If this session wrote or changed the product's
    code, you carry the builder's assumptions and will test what you meant to
    build, not what a user meets. Say so to the human and recommend a fresh
-   session. If they want you to continue anyway, continue and record
-   `"evaluator_independent": false` in `run.json` and in the report.
+   session. If they want you to continue anyway, continue and start the run
+   with `--independent no`. If you did not build it, use `--independent yes`.
+   Say which in the report.
 2. **Pick the mode** from the request:
    - `review` (default): stop for the human after discovery and after the
      flow list.
@@ -27,7 +28,7 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
      `uf-evaluate` in recheck mode.
    - `update`: the product changed since the registry was written. Run
      `uf-discover` in update mode, then carry on from there.
-3. **Start the run:** `.userflow/bin/new-run.sh --harness <claude|codex> --model <your model id> --mode <mode>`.
+3. **Start the run:** `.userflow/bin/new-run.sh --harness <claude|codex> --model <your model id> --mode <mode> --independent <yes|no>`.
    Keep the printed folder; everything from this session goes there.
 4. **Read `.userflow/flows.yaml`.** If it already has content, continue from
    what is not done. Do not start again from nothing.
@@ -49,10 +50,15 @@ For a large product, do phases 2 to 5 one area at a time, P0 flows first.
 
 ## Finishing
 
-1. Run `.userflow/bin/collect-run.sh`.
+1. Run `.userflow/bin/collect-run.sh`. If it finds no session log (common
+   for a subagent), note that in `decisions.md` and carry on.
 2. Tell the human, in this order: the verdict; the worst things a user will
    hit, in plain words; what you could not verify and why; where the report
-   is. Do not soften it and do not pad it.
+   is; which files you added or changed. Do not soften it and do not pad
+   it. Do not commit anything unless asked.
+   If your harness will not let you write `report.md` (some subagents
+   cannot), put the whole report in your final message and say plainly that
+   the file was not written.
 3. Do not fix anything. If the human asks for fixes, that is a builder's
    job, done in another session, followed by `uf-run recheck`.
 

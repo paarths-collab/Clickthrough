@@ -24,22 +24,25 @@ Follow `.userflow/guide.md`. Log each step in `decisions.md`.
 ## Steps
 
 1. **Clean start.** Stop the product, reset the data, start it again from
-   the commands in the registry. Note the commit. If it will not start, the
-   verdict is CANNOT TELL; stop and report.
+   the commands in the registry. If there is no stop command, stop the
+   process that `run.boot` started. Note the commit. If it will not start,
+   the verdict is CANNOT TELL; stop and report.
 2. **Run every flow test**, with `UF_EVIDENCE_DIR` set to
    `.userflow/runs/<run-id>/evidence`. Save the full output to
    `evidence/test-output.txt`. Reset data between flows if the tests do not
    do it themselves.
-3. **Rerun each failure once, on its own**, after a reset. Same result:
-   real failure. Different result: record it as flaky, and treat flaky as a
-   failure, because users hit it too.
+3. **Rerun each failure once, on its own**, after a reset, with
+   `UF_EVIDENCE_DIR` set to `evidence/rerun` so the first run's evidence is
+   kept. Same result: real failure. Different result: record it as flaky,
+   and treat flaky as a failure, because users hit it too.
 4. **Walk every P0 flow by hand**, and every failed flow. Use a browser you
    can see (a browser tool, or a script that takes a screenshot at each
    step which you then look at). Follow the flow's steps as written. You
    are checking what tests miss: the page looks broken, the message is
    confusing or absent, the button is there but off-screen, the user is
-   left with no idea what happened. If you have no way to see the screen,
-   log a tool gap and say the walk was not done.
+   left with no idea what happened. Save what you saw in `evidence/walk/`.
+   If you have no way to see the screen, log a tool gap and say the walk
+   was not done.
 5. **Sweep the navigation.** As each persona, click every item in every
    menu. Each one must open a real, working page. Record each result in the
    report's Navigation table, with dead items and pages that have no way in.
@@ -53,16 +56,20 @@ Follow `.userflow/guide.md`. Log each step in `decisions.md`.
    log, then the database. Now you may read the code to name the cause.
    State the cause only if you saw it; otherwise say "cause not found".
    If the test itself was wrong, class it `TEST_DEFECT`, fix the test, and
-   run it again. Do not count it against the product.
+   run it again. Do not count it against the product. If the defect was in
+   a helper that other tests share, discard the run and rerun everything
+   from a clean start. List test defects in the report.
 8. **Update the registry.** For every flow set `status`, `failure_class`,
-   `finding`, and `last_run` (commit, run id, evidence paths). The rules:
+   `finding`, and `last_run` (commit, run id, evidence paths relative to
+   the project root). The rules:
    - `pass` needs evidence from this run. No evidence: `unverified`.
    - Could not run it: `blocked`, with `ENV_BLOCKED` or `TOOL_GAP`.
    - A goal works only if every route to it works.
 9. **Write `report.md`** in the run folder from the template. Findings go
    worst first, each written so a builder can act on it without asking you
    anything: what the user did, what they expected, what they got, where it
-   breaks, and the evidence.
+   breaks, and the evidence. If your harness refuses to write the file,
+   return the whole report as text and say the file was not written.
 10. **Check and conclude.** Run
     `python3 .userflow/bin/uf-check.py --stage evaluate`, fix every error,
     and use its verdict unless you have a stated reason not to.

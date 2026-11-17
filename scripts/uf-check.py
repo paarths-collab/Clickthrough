@@ -8,7 +8,11 @@ Stages add checks as the work moves on:
     discover  ids, types, every page has a way in or is flagged, nav leads somewhere
     flows     + every surface is in a flow, every goal has a flow, routes are listed
     test      + every flow has a test file that exists
-    evaluate  + pass needs evidence, fail needs a class and finding; prints the verdict
+    evaluate  + pass needs evidence files that exist, fail needs a class and
+              finding; prints the verdict
+
+With no --stage it runs every check (evaluate). Evidence and test paths are
+relative to the project root (the folder that holds .userflow/).
 
 Exit code 1 if there are errors. Warnings do not fail the check. Needs PyYAML
 (`pip install pyyaml`). If you cannot run this, do the same checks by hand
@@ -25,8 +29,8 @@ except ImportError:
     sys.exit("uf-check needs PyYAML: pip install pyyaml")
 
 STAGES = ["discover", "flows", "test", "evaluate"]
-SURFACE_TYPES = {"nav", "page", "form", "action", "endpoint", "mcp_tool", "cli",
-                 "job", "notification", "data"}
+SURFACE_TYPES = {"nav", "page", "form", "action", "message", "empty_state",
+                 "endpoint", "mcp_tool", "cli", "job", "notification", "data"}
 SOURCES = {"intent", "code", "both"}
 PRIORITIES = {"P0", "P1", "P2"}
 VARIANTS = {"normal", "alternate", "wrong_input", "not_allowed", "interrupted",
@@ -106,7 +110,9 @@ def main():
                 err(f"{sid} ({s.get('name')}): `reach` is empty. Say how a user gets here by clicking, or `none`")
             elif str(reach).strip().lower() == "none":
                 warn(f"{sid} ({s.get('name')}): no way in from the UI. Report it as a finding")
-        if s.get("type") == "nav":
+        # A nav item that was promised and is absent has nothing to lead to;
+        # the "promised, not found" warning below covers it.
+        if s.get("type") == "nav" and s.get("source") != "intent":
             target = s.get("leads_to")
             if target in (None, ""):
                 err(f"{sid} ({s.get('name')}): nav item needs `leads_to` (a surface id, or `nowhere`)")
@@ -162,8 +168,9 @@ def main():
             mine = routes.get(g.get("id"), [])
             if not mine:
                 err(f"goal {g.get('id')} ({g.get('title')}) has no flow")
-            elif not any(f.get("variant") == "normal" for f in mine):
-                warn(f"goal {g.get('id')} ({g.get('title')}) has no `normal` flow")
+            elif not any(f.get("variant") in ("normal", "alternate", "empty") for f in mine):
+                warn(f"goal {g.get('id')} ({g.get('title')}) has no flow where the user "
+                     "simply succeeds (`normal`, `alternate` or `empty`)")
         missing = VARIANTS - set(variants) - {"alternate", "handoff"}
         if missing:
             warn(f"no flow at all for variant(s): {', '.join(sorted(missing))}")
@@ -184,8 +191,18 @@ def main():
         for f in flows:
             fid, status = f.get("id"), f.get("status")
             last = f.get("last_run") or {}
-            if status == "pass" and not last.get("evidence"):
+            evidence = last.get("evidence") or []
+            if isinstance(evidence, str):
+                evidence = [evidence]
+            if status == "pass" and not evidence:
                 err(f"{fid}: status is pass with no evidence. Use `unverified`")
+            gone = [str(p) for p in evidence if not os.path.exists(os.path.join(root, str(p)))]
+            if gone and status == "pass":
+                err(f"{fid}: pass, but evidence not found (paths are relative to the "
+                    f"project root): {', '.join(gone)}")
+            elif gone:
+                warn(f"{fid}: evidence not found (paths are relative to the project "
+                     f"root): {', '.join(gone)}")
             if status in ("pass", "fail") and not last.get("commit"):
                 err(f"{fid}: {status} without last_run.commit")
             if status in ("fail", "blocked"):

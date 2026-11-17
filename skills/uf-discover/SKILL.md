@@ -50,6 +50,13 @@ Then walk each page the navigation opens. Record every form, button, link,
 tab, modal, filter, empty state and message as a surface. Follow links into
 pages that are not in the menu (detail pages, settings sub-pages, wizards).
 
+Which type to use: a link, button, tab or filter is an `action`; words the
+product shows in response (an error, a confirmation) are a `message`; what
+a screen shows with no data is an `empty_state`; anything sent outside the
+product (email, SMS, push) is a `notification`. Record the messages and
+empty states you meet while walking, and the ones the intent promises. Do
+not submit forms just to collect messages; that is what the flows are for.
+
 ### 3. The code: what exists that you did not see?
 
 Now read the code to find what the UI walk missed: routes and pages,
@@ -62,14 +69,21 @@ clicking, and record it in `reach` (for example `sidebar > Projects > row`).
 If no menu, link or button leads to it, `reach: none`. That is a finding:
 the feature exists and no user can find it.
 
+If the code makes you suspect a bug, do not report it. Write the suspicion
+in `decisions.md` and carry it to `uf-flows`, where it becomes a flow a
+user could plausibly do. The run decides whether it is real.
+
 ## Record each surface
 
 Add to `surfaces:` in `.userflow/flows.yaml` with `type`, `name`,
 `location`, `personas`, `reach`, and `source`:
 
-- `both`: promised in the intent and present in the product. Normal.
+- `both`: promised in the intent and present in the product. Normal. Also
+  use it for an ordinary part of a promised feature that the intent does
+  not spell out (its empty state, its "signed in as" line).
 - `intent`: promised, and you could not find it. A missing feature. Keep it
-  on the map so a flow gets written for it and fails visibly.
+  on the map so a flow gets written for it and fails visibly. A promised
+  menu item that is absent is `type: nav`, `source: intent`, no `leads_to`.
 - `code`: present, never promised. May be unfinished, leftover, or simply
   undocumented. Note which you think it is.
 

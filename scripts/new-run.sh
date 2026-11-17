@@ -1,21 +1,41 @@
 #!/usr/bin/env bash
 # Start a run folder: .userflow/runs/<run-id>/ with run.json and decisions.md.
 # Prints the folder path. Usage:
-#   new-run.sh [--harness claude|codex|other] [--model ID] [--mode review|auto|recheck]
-#              [--condition skills|baseline] [--project DIR]
+#   new-run.sh [--harness claude|codex|other] [--model ID]
+#              [--mode review|auto|recheck|update] [--condition skills|baseline]
+#              [--independent yes|no] [--project DIR]
+# --independent: "yes" if this session did not build or change the product,
+# "no" if it did. Left out, run.json records null (not stated).
 set -euo pipefail
 
 harness="unknown"; model="unknown"; mode="review"; condition="skills"; project=""
+independent="null"
 while [ $# -gt 0 ]; do
+  if [ $# -lt 2 ]; then echo "option $1 needs a value" >&2; exit 2; fi
   case "$1" in
     --harness) harness="$2"; shift 2 ;;
     --model) model="$2"; shift 2 ;;
     --mode) mode="$2"; shift 2 ;;
     --condition) condition="$2"; shift 2 ;;
     --project) project="$2"; shift 2 ;;
+    --independent)
+      case "$2" in
+        yes|true) independent="true" ;;
+        no|false) independent="false" ;;
+        *) echo "--independent takes yes or no, not: $2" >&2; exit 2 ;;
+      esac
+      shift 2 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
+case "$mode" in
+  review|auto|recheck|update) ;;
+  *) echo "unknown mode: $mode (use review, auto, recheck or update)" >&2; exit 2 ;;
+esac
+case "$condition" in
+  skills|baseline) ;;
+  *) echo "unknown condition: $condition (use skills or baseline)" >&2; exit 2 ;;
+esac
 
 if [ -z "$project" ]; then
   project="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -41,7 +61,7 @@ cat > "$run_dir/run.json" <<JSON
   "mode": "$mode",
   "commit": "$commit",
   "uncommitted_changes": $dirty,
-  "evaluator_independent": null,
+  "evaluator_independent": $independent,
   "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "ended_at": null,
   "tokens": null,

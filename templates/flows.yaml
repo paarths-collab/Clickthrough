@@ -1,6 +1,8 @@
 # User-flow registry. Single source of truth for what a user can do with this
 # product and whether it has been shown to work. Check it with:
-#   python3 .userflow/bin/uf-check.py
+#   python3 .userflow/bin/uf-check.py --stage discover|flows|test|evaluate
+# (no --stage runs every check). Paths in this file are relative to the
+# project root.
 version: 1
 
 product:
@@ -14,7 +16,7 @@ run:
   boot: ""               # one command that starts the whole stack
   seed: ""
   reset: ""              # puts data back to a known state between flows
-  stop: ""
+  stop: ""               # a command, or in words: "stop the process started by boot"
   base_url: ""
   test_command: ""       # runs every file in userflow-tests/
   services: []           # - {name: api, check: "GET /health", logs: "path or command"}
@@ -32,13 +34,17 @@ areas: []
 surfaces: []
 #  - id: S001
 #    area: A1
-#    type: page           # nav | page | form | action | endpoint | mcp_tool | cli | job | notification | data
+#    type: page           # nav | page | form | action | message | empty_state | endpoint | mcp_tool | cli | job | notification | data
+#                         # message = words shown on screen (error, confirmation); empty_state = what a
+#                         # screen shows with no data; notification = sent outside the product (email, SMS, push)
 #    name: "Projects page"
 #    location: "/projects.html"
 #    source: both         # intent | code | both   (intent = promised, not found; code = exists, never promised)
 #    personas: [P1]
-#    reach: "sidebar > Projects"   # how a user gets here by clicking; `none` = no way in
-#    leads_to: null       # nav items only: the surface id it opens, or `nowhere` if it is dead
+#    reach: "sidebar > Projects"   # pages, forms and actions: how a user gets here by clicking; `none` = no way in
+#    leads_to: null       # nav items only: the surface id it opens, or `nowhere` if it is dead.
+#                         # Leave it out for a nav item that was promised and does not exist (source: intent).
+#    excluded: ""         # only if no flow should cover this surface: the reason (e.g. "health check, not for users")
 #    note: ""
 
 # What a user comes here to get done. One goal can have several routes.
@@ -61,7 +67,7 @@ flows: []
 #      - {do: "Click Projects in the sidebar", see: "List of my projects"}
 #    persisted: ["tasks row with this title under this project"]
 #    side_effects: []
-#    test_file: "userflow-tests/F001-add-task-project-page.test.js"
+#    test_file: "userflow-tests/F001-add-task-project-page.test.js"   # null if the flow is blocked
 #    status: untested     # untested | pass | fail | unverified | blocked
 #    failure_class: null  # FLOW_BROKEN | SOFTWARE_BUG | INTEGRATION | MISSING_FEATURE | ENV_BLOCKED | TEST_DEFECT | TOOL_GAP
 #    finding: ""          # one line: what the user experiences

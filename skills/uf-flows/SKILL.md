@@ -54,7 +54,10 @@ Add to `flows:` with every field in the template. The parts that matter
 most:
 
 - `start`: where the user really begins, usually logged out at the entry
-  page. Not a deep link.
+  page. Not a deep link. The exception is a flow where typing the address
+  is the point: a `not_allowed` flow that changes an id in the address, or
+  a flow that checks a page with `reach: none` on its own. Write "changes
+  the address to ..." as a step.
 - `steps`: each a `do` (a user action: click, type, choose) and a `see`
   (what the user should then see). Use the labels on the screen. No
   endpoint names, no function names.
@@ -73,6 +76,11 @@ Expected results come from the intent. If the intent does not say what
 should happen, use what a reasonable user would expect, and record that
 judgment in `decisions.md`.
 
+Turn each suspicion noted during discovery into a flow a user could
+plausibly do (for example "types a display name that is just a number").
+Set priorities now, before any result is known. Changing one later needs a
+reason written in `decisions.md` and in the report.
+
 ## 5. Check coverage
 
 Run `python3 .userflow/bin/uf-check.py --stage flows` and fix every error.
@@ -87,8 +95,8 @@ what you saw in the product.
 
 Then check by hand what the script cannot: every navigation item is used
 in some flow; every surface tagged `intent` has a flow (it will fail, which
-is the point); every persona has a first-visit flow and a return-visit
-flow.
+is the point); every persona has a first-visit flow (variant `empty`:
+they arrive with nothing yet) and a `return_visit` flow.
 
 ## 6. Stop for review (not in auto mode)
 

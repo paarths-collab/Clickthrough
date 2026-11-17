@@ -22,7 +22,9 @@ must be running.
 2. **Use the project's end-to-end framework if it has one.** If it has
    none, use Playwright for anything with a browser or HTTP, and the
    official MCP client for MCP tools. Record the choice and the command
-   that runs all flow tests in `run.test_command`.
+   that runs all flow tests in `run.test_command`. Adding the test tool as
+   a dev dependency is allowed; keep its config, helpers and scratch output
+   inside `userflow-tests/` (scratch in `userflow-tests/.results/`).
 3. **Real product, real door.** The test talks to the running stack through
    the entry point the user uses. It does not import application code, call
    internal functions, or replace any part of this product with a fake.
@@ -30,7 +32,8 @@ must be running.
    `start`. Reach each screen by clicking the menu items, links and buttons
    named in the steps. Do not `goto` a deep URL to skip navigation: if the
    link is missing, the test must fail. Do not call the API to perform a
-   step the user performs in the UI.
+   step the user performs in the UI. Only a flow whose step *is* "changes
+   the address" (see `uf-flows`) may type one; say so in the top comment.
 5. **Find things the way a user does**: by visible text, label, role or
    placeholder. Not by internal ids or CSS classes, unless nothing else
    exists (and note that as a usability observation).
@@ -41,7 +44,13 @@ must be running.
 7. **Never weaken a test to get a pass.** No loosened assertions, no blind
    retries, no skips, no long sleeps to hide a race. If a test fails, the
    next phase decides whether the product or the test is wrong.
-8. **Do not touch application code.** If a flow cannot be tested without a
+8. **Wait for what the user waits for.** After an action, wait for the
+   specific thing the user would see (the text appears, the row is gone) or
+   for the specific response to that action, with a normal timeout. Do not
+   wait on "network idle" or a fixed pause: on an already-loaded page those
+   return before the product has answered, and the check after them reads
+   the old screen.
+9. **Do not touch application code.** If a flow cannot be tested without a
    change to the product, mark it `blocked` and log a tool gap.
 
 ## What each test must check
@@ -64,9 +73,20 @@ from: uncaught page errors, requests to this product that return 4xx or
 5xx when the flow expects success, and a page stuck on a loading state.
 Print them in the test output so they become evidence.
 
+Some refusals are the product working: the 401 for a wrong password, the
+"not logged in" check on a logged-out page. List the refusals a flow
+expects at the top of its test, by method, path and status. Every other
+4xx or 5xx from this product fails the flow. A missing static file that no
+user would notice (a favicon) is printed and reported under "Errors seen",
+and does not fail the flow.
+
 For `wrong_input` and `not_allowed` flows, the pass condition is that the
 user is stopped **and told why in words**, and that nothing wrong was
-saved. A silent nothing is a failure. A 500 is a failure.
+shown or saved. A silent nothing is a failure. A 500 is a failure. Check
+the two halves separately and print both, so the finding can say which
+failed: "another user's data was shown or changed" is serious; "the data
+stayed safe and the user was told nothing" is a lesser failure of the same
+flow, and the finding must say the data was safe.
 
 For flows whose surface is tagged `intent` (promised, not found), still
 write the test from the intent. It will fail. That is how a missing feature
@@ -76,8 +96,9 @@ becomes visible instead of forgotten.
 
 Have each test save a screenshot of the final state, and of the page at the
 moment of failure, to the folder in the `UF_EVIDENCE_DIR` environment
-variable when it is set (one subfolder per flow id). Print the values it
-observed, so the output alone shows what happened.
+variable when it is set: `<UF_EVIDENCE_DIR>/<flow-id>/final.png` and
+`failure.png`. Print the values it observed, so the output alone shows what
+happened.
 
 ## Order of work
 
@@ -88,7 +109,10 @@ fails because of its own mistake (wrong selector, bad setup) is not: fix
 the test.
 
 Do not record `pass` or `fail` in the registry in this phase. That is
-`uf-evaluate`'s job, in a clean run with evidence.
+`uf-evaluate`'s job, in a clean run with evidence. The one status you do
+set now is `blocked`, for a flow that cannot be tested: give it a
+`failure_class` (`TOOL_GAP` or `ENV_BLOCKED`), a `finding`, and
+`test_file: null`.
 
 When every flow has a test file or is `blocked` with a reason, run
 `python3 .userflow/bin/uf-check.py --stage test` and fix every error.

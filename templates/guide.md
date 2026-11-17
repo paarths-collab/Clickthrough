@@ -28,17 +28,25 @@ to the result they can see and that is still there when they come back.
    page, home page, first command) and reaches each screen by clicking what
    a user would click. Do not type a deep URL to skip steps and do not call
    the API to do a step the user does in the UI. Setting up *preconditions*
-   (a seeded account, existing data) by script is fine.
+   (a seeded account, existing data) by script is fine. One exception: when
+   typing the address *is* what is being tested (a `not_allowed` flow where
+   a user changes an id in the address, or a page with `reach: none` checked
+   on its own), type it, and say so in a comment at the top of the test.
 4. **Do not judge by reading source.** Source code tells you where to look
    and helps explain a failure after you have seen it. It never decides
-   whether something works.
+   whether something works. If reading code makes you suspect a bug, do not
+   report it from the code: write a flow a real user could plausibly do
+   that would hit it, and let the run decide.
 5. **Evidence or it did not happen.** A flow is `pass` only with evidence
    from a real run. Without evidence the status is `unverified`.
 6. **Never bend a test to make it pass.** If a test fails, either the
    product is broken or the test is wrong. Say which. Do not loosen the
    check, add retries to hide it, or skip it.
 7. **Do not change the product.** In these skills you report. You do not
-   edit application code, migrations or config to make a flow pass.
+   edit application code, migrations or config to make a flow pass. Adding
+   a test tool the project lacks (for example Playwright as a dev
+   dependency, with its config inside `userflow-tests/`) is not a product
+   change; list what you added in the report.
 8. **If the product cannot start, stop.** Report the blocker. Do not carry
    on with imagined results.
 
@@ -117,8 +125,18 @@ route the server does not have)".
 
 Evidence lives in `.userflow/runs/<run-id>/evidence/<flow-id>/`. Good
 evidence for one flow is: the test's output, a screenshot of the final state
-(and of the failure, if any), any failed network calls or console errors,
-and the result of checking what was saved.
+(`final.png`) and of the failure, if any (`failure.png`), any failed network
+calls or console errors, and the result of checking what was saved.
+
+Later passes get their own folders so nothing is overwritten:
+`evidence/rerun/<flow-id>/` for the solo rerun of a failure and
+`evidence/walk/<flow-id>/` for the hand walk. In the registry, write
+evidence paths relative to the project root; `uf-check.py` checks that they
+exist.
+
+The registry, `tool-gaps.md` and `userflow-tests/` are meant to be
+committed, but committing is the human's call. Leave them in the working
+tree and list what you added or changed.
 
 Check what was saved in the strongest way you have:
 1. Read the database directly (read-only).
