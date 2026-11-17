@@ -28,6 +28,8 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
      `uf-evaluate` in recheck mode.
    - `update`: the product changed since the registry was written. Run
      `uf-discover` in update mode, then carry on from there.
+   If `.userflow/bin/new-run.sh` does not exist, the project is not set
+   up yet: load `uf-setup` and follow it first.
 3. **Start the run:** `.userflow/bin/new-run.sh --harness <claude|codex> --model <your model id> --mode <mode> --independent <yes|no>`.
    Keep the printed folder; everything from this session goes there.
 4. **Read `.userflow/flows.yaml`.** If it already has content, continue from

@@ -4,17 +4,19 @@
 #   ./install.sh claude <project-path>    skills go to .claude/skills/, rules to CLAUDE.md
 #   ./install.sh codex  <project-path>    skills go to .agents/skills/, rules to AGENTS.md
 #   ./install.sh both   <project-path>
+#   ./install.sh plugin <project-path>    no skills copied; .claude/settings.json makes
+#                                         Claude Code load the user-flow-qa plugin
 #
 # Safe to run again: it updates the skills, guide and scripts, and leaves
 # your registry (flows.yaml), tool-gaps.md and run folders alone. It never
 # deletes anything.
 set -euo pipefail
 
-usage() { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 [ $# -eq 2 ] || usage
 target="$1"
-case "$target" in claude|codex|both) ;; *) usage ;; esac
+case "$target" in claude|codex|both|plugin) ;; *) usage ;; esac
 if [ ! -d "$2" ]; then
   echo "Project folder not found: $2" >&2
   exit 1
@@ -52,6 +54,49 @@ fi
 if [ "$target" = "codex" ] || [ "$target" = "both" ]; then
   install_skills ".agents/skills"
   add_rules "AGENTS.md"
+fi
+
+enable_plugin() { # project settings that make Claude Code load the plugin
+  local settings="$project/.claude/settings.json"
+  mkdir -p "$project/.claude"
+  if [ ! -f "$settings" ]; then
+    cat > "$settings" <<'JSON'
+{
+  "extraKnownMarketplaces": {
+    "user-flow-qa": {
+      "source": { "source": "github", "repo": "paarths-collab/user" }
+    }
+  },
+  "enabledPlugins": {
+    "user-flow-qa@user-flow-qa": true
+  }
+}
+JSON
+    echo "plugin   -> created .claude/settings.json (marketplace + plugin enabled)"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 - "$settings" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as f:
+    data = json.load(f)
+data.setdefault("extraKnownMarketplaces", {})["user-flow-qa"] = {
+    "source": {"source": "github", "repo": "paarths-collab/user"}}
+data.setdefault("enabledPlugins", {})["user-flow-qa@user-flow-qa"] = True
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+PY
+    echo "plugin   -> added the marketplace and plugin to .claude/settings.json"
+  else
+    echo "plugin   -> .claude/settings.json exists and python3 is missing; add by hand:" >&2
+    echo '            "extraKnownMarketplaces": {"user-flow-qa": {"source": {"source": "github", "repo": "paarths-collab/user"}}}' >&2
+    echo '            "enabledPlugins": {"user-flow-qa@user-flow-qa": true}' >&2
+  fi
+}
+
+if [ "$target" = "plugin" ]; then
+  enable_plugin
+  add_rules "CLAUDE.md"
 fi
 
 uf="$project/.userflow"

@@ -18,11 +18,29 @@ evidence. Every run is recorded so it can be studied later.
 | `sample-app/` | Tasklet, a small app with ten planted user-flow bugs. Its unit tests pass. Good for a first smoke run. |
 | `sample-app-hard/` | Helpline, a support inbox with three roles, a web app, a background worker, an MCP server and 25 planted bugs in four tiers of difficulty. Its tests pass. Use this one for before/after comparisons. |
 
-## Quick start
+## Install
+
+**Claude Code plugin** (CLI, desktop or web). In a Claude Code session:
+
+```
+/plugin install user-flow-qa --marketplace paarths-collab/user
+```
+
+On older Claude Code, two steps: `/plugin marketplace add paarths-collab/user`,
+then `/plugin install user-flow-qa@user-flow-qa`. Then, in each project, say
+"Set up user-flow QA" (the `uf-setup` skill creates `.userflow/` and the
+rules, and can enable the plugin for everyone on the repo, cloud sessions
+included).
+
+**Into a project's repo** (Codex, or Claude Code without the plugin):
 
 ```bash
-./install.sh claude /path/to/project
+./install.sh both /path/to/project
 ```
+
+Modes: `claude`, `codex`, `both` copy the skills into the repo; `plugin`
+only adds `.claude/settings.json` entries that make Claude Code load the
+plugin. Commit the result so cloud sessions get it.
 
 Three ways to use it:
 

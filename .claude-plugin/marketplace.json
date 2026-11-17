@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "user-flow-qa",
+  "description": "User-flow QA: make AI agents check products the way users use them.",
+  "owner": {
+    "name": "paarths-collab"
+  },
+  "plugins": [
+    {
+      "name": "user-flow-qa",
+      "description": "Check a product the way its users use it: map, flows, tests against the running product, verdict with evidence. Any language, any kind of product.",
+      "source": "./",
+      "category": "development",
+      "homepage": "https://github.com/paarths-collab/user"
+    }
+  ]
+}
