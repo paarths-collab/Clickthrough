@@ -27,7 +27,9 @@ install_skills() { # $1 = skills folder inside the project
   local dest="$project/$1" skill
   mkdir -p "$dest"
   for skill in "$pack"/skills/*/; do
-    cp -R "$skill" "$dest/"
+    # No trailing slash on the source: BSD cp (macOS) would copy the folder's
+    # contents instead of the folder, and the skills would overwrite each other.
+    cp -R "${skill%/}" "$dest/"
   done
   echo "skills   -> $1/ ($(ls "$pack/skills" | tr '\n' ' '))"
 }
