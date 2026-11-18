@@ -5,7 +5,7 @@
 # the session has ended to get the complete log.
 #
 # Usage:
-#   collect-run.sh [--project DIR] [--run RUN_ID] [--harness claude|codex]
+#   collect-run.sh [--project DIR] [--run RUN_ID] [--harness claude|codex|cursor]
 #                  [--session ID_OR_FILE] [--out DIR]
 #
 # Where the logs come from:
@@ -153,6 +153,10 @@ collect_codex() {
 
 status=0
 case "$harness" in
+  cursor|other)
+    echo "No automatic log collection for $harness yet. Export the chat or agent transcript" >&2
+    echo "and save it in $out, then note it in decisions.md." >&2
+    status=1 ;;
   claude) collect_claude || status=1 ;;
   codex) collect_codex || status=1 ;;
   *)

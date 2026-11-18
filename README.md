@@ -19,7 +19,7 @@ your project (Claude Code, Codex, any cloud session):
 > `git clone --depth 1 https://github.com/paarths-collab/user.git /tmp/ufqa && bash /tmp/ufqa/install.sh both .`
 > Then commit the files it lists under "git add" and push.
 
-Use `claude` or `codex` instead of `both` if you only use one agent. On
+`both` covers Claude Code, Codex and Cursor (Cursor reads `.agents/skills/` and `AGENTS.md`). Use `claude`, `codex` or `cursor` if you only use one. On
 your own machine you can run the same two commands yourself.
 
 **2. Get it onto your default branch.** Merge the commit or PR into `main`.
@@ -52,7 +52,7 @@ user-flow report.
 | `skills/` | `uf-run` (full audit, entry point) and its phases: `uf-preflight`, `uf-discover`, `uf-flows`, `uf-test`, `uf-evaluate`. `uf-patterns`: what breaks for users and how to see it. `uf-cases`: go deep on one component or one whole workflow - understand it, list every case and path a user can produce, test them. `uf-security`: what another tenant, a lower role, an API key or an AI agent can do that they must not. `uf-env`: a disposable local test copy of the product, built once and reused. `uf-fix`: fix findings one at a time, each proven by a real run. `uf-score`: score an audit against known issues. `uf-ready-check`: the builder's check before saying "done". `uf-setup`: installs into a project. |
 | `templates/` | Shared rules (`guide.md`), the flow registry (`flows.yaml`), report, decision log, tool-gaps log, CLAUDE.md/AGENTS.md rules. |
 | `scripts/` | `uf-inventory.py` (dissects the code into pages, endpoints, CLI commands, agent tools, jobs, webhooks, outbound calls, emails, destructive writes, env vars), `uf-check.py` (registry validator and verdict), `new-run.sh`, `collect-run.sh`. |
-| `install.sh` | `./install.sh claude|codex|both|plugin <project>` |
+| `install.sh` | `./install.sh claude|codex|cursor|both|plugin <project>` |
 | `experiment/` | Before/after protocol, scorecard, answer keys for the sample apps, a known-issues template. |
 | `evals/` | Eval cases for the skills themselves: `claude plugin eval .` runs each with and without the plugin. |
 | `templates/ci-github.yml` | GitHub Actions workflow that runs the test stack and every flow test on each pull request. |

@@ -95,7 +95,7 @@ to work out which steps a cheaper model can follow.
 
 1. At the start of a session run `.userflow/bin/new-run.sh` once. It creates
    the run folder and prints its path. Pass what you know:
-   `--harness claude|codex --model <id> --mode review|auto`.
+   `--harness claude|codex|cursor|other --model <id> --mode review|auto`.
    Use that one folder for the whole session.
 2. Append to `decisions.md` in that folder **as you go**, one entry per
    meaningful step, written when it happens and not reconstructed at the

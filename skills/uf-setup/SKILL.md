@@ -26,10 +26,11 @@ The installer is `install.sh` in the root of the user-flow QA pack.
 | `plugin` | `.userflow/`, rules in `CLAUDE.md`, and `.claude/settings.json` entries that make Claude Code (also cloud sessions) load this plugin for everyone on the repo. Skills are not copied. | Claude Code, and the plugin is how you got these skills. Default. |
 | `claude` | Copies the skills into `.claude/skills/`, rules in `CLAUDE.md`. | Claude Code without the plugin. |
 | `codex` | Copies the skills into `.agents/skills/`, rules in `AGENTS.md`. | Codex. |
-| `both` | `claude` and `codex` together. | Both agents work on this repo. |
+| `cursor` | Same files as `codex`: Cursor reads `.agents/skills/` and `AGENTS.md`. | Cursor. |
+| `both` | `claude` and `codex` together; covers Cursor too. | More than one agent works on this repo. |
 
 If the human named a mode, use it. Otherwise use `plugin` under Claude
-Code and `codex` under Codex.
+Code, `codex` under Codex, `cursor` under Cursor.
 
 ## 3. Run it
 

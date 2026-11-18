@@ -3,7 +3,8 @@
 #
 #   ./install.sh claude <project-path>    skills go to .claude/skills/, rules to CLAUDE.md
 #   ./install.sh codex  <project-path>    skills go to .agents/skills/, rules to AGENTS.md
-#   ./install.sh both   <project-path>
+#   ./install.sh cursor <project-path>    same files as codex: Cursor reads .agents/skills/ and AGENTS.md
+#   ./install.sh both   <project-path>    claude + codex, which also covers Cursor
 #   ./install.sh plugin <project-path>    no skills copied; .claude/settings.json makes
 #                                         Claude Code load the user-flow-qa plugin
 #
@@ -12,11 +13,11 @@
 # deletes anything.
 set -euo pipefail
 
-usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 [ $# -eq 2 ] || usage
 target="$1"
-case "$target" in claude|codex|both|plugin) ;; *) usage ;; esac
+case "$target" in claude|codex|cursor|both|plugin) ;; *) usage ;; esac
 if [ ! -d "$2" ]; then
   echo "Project folder not found: $2" >&2
   exit 1
@@ -85,7 +86,7 @@ if [ "$target" = "claude" ] || [ "$target" = "both" ]; then
   install_skills ".claude/skills"
   add_rules "CLAUDE.md"
 fi
-if [ "$target" = "codex" ] || [ "$target" = "both" ]; then
+if [ "$target" = "codex" ] || [ "$target" = "cursor" ] || [ "$target" = "both" ]; then
   install_skills ".agents/skills"
   add_rules "AGENTS.md"
 fi
@@ -179,6 +180,8 @@ Installed. Next:
      Add "auto" to run without stopping for your review.
 
 From now on, building sessions run uf-ready-check before saying "done".
+Cursor picks up the skills from .agents/skills/ and the rules from AGENTS.md
+(installed by the codex, cursor and both modes).
 Optional: if no README or spec says what the product is for, write it in
 .userflow/flows.yaml (product.purpose).
 EOF
