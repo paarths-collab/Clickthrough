@@ -49,7 +49,7 @@ user-flow report.
 
 | Path | What it is |
 |---|---|
-| `skills/` | `uf-run` (full audit, entry point) and its phases: `uf-preflight`, `uf-discover`, `uf-flows`, `uf-test`, `uf-evaluate`. `uf-patterns`: what breaks for users and how to see it. `uf-cases`: go deep on one component or one whole workflow - understand it, list every case and path a user can produce, test them. `uf-security`: what another tenant, a lower role, an API key or an AI agent can do that they must not. `uf-env`: a disposable local test copy of the product, built once and reused. `uf-fix`: fix findings one at a time, each proven by a real run. `uf-score`: score an audit against known issues. `uf-ready-check`: the builder's check before saying "done". `uf-setup`: installs into a project. |
+| `skills/` | `uf-run` (full audit, entry point) and its phases: `uf-preflight`, `uf-discover`, `uf-flows`, `uf-test`, `uf-evaluate`. `uf-patterns`: what breaks for users and how to see it. `uf-catalog`: list every flow in the whole product first (every page, endpoint, tool and job from the code map), so the report can say "tested X of Y". `uf-parallel`: test a long list in batches, with helper agents in parallel and separate test data, and carry on in a new session until done. `uf-cases`: go deep on one component or one whole workflow - understand it, list every case and path a user can produce, test them. `uf-security`: what another tenant, a lower role, an API key or an AI agent can do that they must not. `uf-env`: a disposable local test copy of the product, built once and reused. `uf-fix`: fix findings one at a time, each proven by a real run. `uf-score`: score an audit against known issues. `uf-ready-check`: the builder's check before saying "done". `uf-setup`: installs into a project. |
 | `templates/` | Shared rules (`guide.md`), the flow registry (`flows.yaml`), report, decision log, tool-gaps log, CLAUDE.md/AGENTS.md rules. |
 | `scripts/` | `uf-inventory.py` (dissects the code into pages, endpoints, CLI commands, agent tools, jobs, webhooks, outbound calls, emails, destructive writes, env vars), `uf-check.py` (registry validator and verdict), `new-run.sh`, `collect-run.sh`. |
 | `install.sh` | `./install.sh claude|codex|cursor|both|plugin <project>` |
@@ -92,6 +92,7 @@ Three ways to use it:
 | Release check | `uf-run` | In a **new** session (not the one that built it): "Is this project ready for real users? Use uf-run." Add `auto` to run without stopping for review. |
 | Any time you look for bugs | `uf-patterns` | "Find what is broken for users. Use uf-patterns." |
 | Every test and edge case of a component or a whole workflow | `uf-cases` | "List and test every case for the invite dialog and the whole invite workflow. Use uf-cases." (also part of every `uf-run` for P0) |
+| Continue a long audit | `uf-parallel` | New session: "Continue the user-flow audit. Use uf-run continue." |
 | Security review | `uf-security` | "Security audit. Use uf-security." (also part of every `uf-run`) |
 | Fix what an audit found | `uf-fix` | "Fix the findings. Use uf-fix." Then a **new** session: "Use uf-run recheck." |
 | App can't be started for testing | `uf-env` | "Build a test environment. Use uf-env." (preflight also uses it when the app won't start) |

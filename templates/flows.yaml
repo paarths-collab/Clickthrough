@@ -45,6 +45,8 @@ surfaces: []
 #    leads_to: null       # nav items only: the surface id it opens, or `nowhere` if it is dead.
 #                         # Leave it out for a nav item that was promised and does not exist (source: intent).
 #    excluded: ""         # only if no flow should cover this surface: the reason (e.g. "health check, not for users")
+#    covers: []           # code-map entries this surface stands for: paths, globs, tool names, files
+#                         # e.g. ["/projects", "GET /api/v1/projects*", "src/app/(main)/projects/*"]
 #    cases: null          # path to .userflow/cases/<id>.md once uf-cases has covered it (expected for surfaces in P0 flows)
 #  goals can carry the same field for the whole-workflow cases: cases: .userflow/cases/G01.md
 #    note: ""

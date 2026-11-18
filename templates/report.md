@@ -49,6 +49,36 @@ Worst first. Each one is written so the builder can act on it.
 - Breaks at: <step and layer, and the cause if you found it>
 - Evidence: <paths>
 
+## Security checklist (uf-security)
+
+Every check, with how it was done. "Not done" needs a reason.
+
+| # | Check | Result | How known (ran / traced / not done) | Flows or finding |
+|---|---|---|---|---|
+| 1 | Read without permission (ids, other tenant) | | | |
+| 2 | Act above your role | | | |
+| 3 | Mass assignment | | | |
+| 4 | What keys and agents can do that needs a human | | | |
+| 5 | Prompt injection to action | | | |
+| 6 | Destructive and control-changing actions are audited | | | |
+| 7 | Egress channels (webhooks, exports, integrations) | | | |
+| 8 | SSRF | | | |
+| 9 | Leaks through side doors (raw API, errors, emails, exports) | | | |
+| 10 | Injection | | | |
+| 11 | Crash on bad input | | | |
+| 12 | Sessions (logout, links once, cookies, CSRF, removal) | | | |
+| 13 | Brute force and rate limits | | | |
+| 14 | Secrets | | | |
+| 15 | Privacy export and erase complete | | | |
+| 16 | Retention runs; legal pages exist | | | |
+| 17 | Dependencies | | | |
+
+## Coverage
+
+| Area | Flows listed | Tested | Pass | Fail | Likely broken | Blocked |
+|---|---|---|---|---|---|---|
+| | | | | | | |
+
 ## Navigation
 
 | Nav item | Opens | Result |

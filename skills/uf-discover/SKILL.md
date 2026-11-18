@@ -62,7 +62,10 @@ not submit forms just to collect messages; that is what the flows are for.
 
 ### 3. The code: what exists that you did not see?
 
-Start with `python3 .userflow/bin/uf-inventory.py --out .userflow/runs/<run-id>/inventory.md`.
+Start with `python3 .userflow/bin/uf-inventory.py --json --out .userflow/inventory.json`
+(commit it; `uf-catalog` and `uf-check.py` use it to check coverage) and
+`python3 .userflow/bin/uf-inventory.py --out .userflow/runs/<run-id>/inventory.md`
+to read.
 It dissects the code into pages, endpoints, CLI commands, agent tools,
 jobs, webhooks, outbound calls, email sends, destructive writes and
 environment variables, each with file and line. It is a heuristic map:
