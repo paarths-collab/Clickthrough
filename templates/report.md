@@ -7,6 +7,13 @@
 - Mode: <review | auto | recheck>
 - Areas covered: <all | list>   Areas not covered: <none | list>
 
+## In plain words
+
+<Five lines at most, for someone who will not read the rest: can people
+use it; the worst things they will hit; how much was checked ("tested X
+of Y flows"); what you need from the human to check the rest. No jargon,
+no file names.>
+
 ## Verdict: <READY | NOT READY | CANNOT TELL>
 
 <Two or three sentences in plain words: can a real user use this, and what

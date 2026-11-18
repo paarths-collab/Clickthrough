@@ -1,0 +1,57 @@
+name: pack tests
+
+on:
+  pull_request:
+  push:
+    branches: [feature/user-flow-qa]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install PyYAML
+        run: pip install pyyaml
+      - name: Shell scripts parse
+        run: |
+          bash -n install.sh
+          bash -n scripts/new-run.sh
+          bash -n scripts/collect-run.sh
+      - name: Skill files have valid frontmatter
+        run: |
+          python - <<'PY'
+          import glob, re, yaml
+          bad = []
+          for path in sorted(glob.glob("skills/*/SKILL.md")):
+              text = open(path, encoding="utf-8").read()
+              meta = yaml.safe_load(text.split("---\n")[1])
+              folder = path.split("/")[1]
+              if meta.get("name") != folder or not re.fullmatch(r"[a-z0-9-]{1,64}", folder):
+                  bad.append(f"{path}: name must equal the folder name")
+              if not meta.get("description") or len(meta["description"]) > 1024:
+                  bad.append(f"{path}: description missing or over 1024 characters")
+          if bad:
+              raise SystemExit("\n".join(bad))
+          print(f"{len(glob.glob('skills/*/SKILL.md'))} skills ok")
+          PY
+      - name: Script tests
+        run: python -m unittest discover -s tests -v
+      - name: Installer installs every skill and script
+        run: |
+          mkdir -p /tmp/uf-target && cd /tmp/uf-target && git init -q
+          bash "$GITHUB_WORKSPACE/install.sh" both /tmp/uf-target
+          bash "$GITHUB_WORKSPACE/install.sh" both /tmp/uf-target
+          test "$(ls /tmp/uf-target/.claude/skills | wc -l)" -eq "$(ls "$GITHUB_WORKSPACE/skills" | wc -l)"
+          test -x /tmp/uf-target/.userflow/bin/uf-double.py
+          test -x /tmp/uf-target/.userflow/bin/uf-inventory.py
+          grep -q "user-flow-qa:start" /tmp/uf-target/CLAUDE.md
