@@ -11,7 +11,7 @@
       "description": "Check a product the way its users use it: map, flows, tests against the running product, verdict with evidence. Any language, any kind of product.",
       "source": "./",
       "category": "development",
-      "homepage": "https://github.com/paarths-collab/user"
+      "homepage": "https://github.com/paarths-collab/user-flow-qa"
     }
   ]
 }

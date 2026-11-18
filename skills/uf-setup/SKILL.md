@@ -16,7 +16,7 @@ The installer is `install.sh` in the root of the user-flow QA pack.
   directory: `<base directory>/../../install.sh`. `${CLAUDE_PLUGIN_ROOT}`
   points to the same pack root if it is set.
 - **Not found:** fetch the pack (it is public):
-  `git clone --depth 1 https://github.com/paarths-collab/user.git <a temp folder>`
+  `git clone --depth 1 https://github.com/paarths-collab/user-flow-qa.git <a temp folder>`
   and use `<that folder>/install.sh`. Never clone it inside the project.
 
 ## 2. Pick the mode

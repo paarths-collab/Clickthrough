@@ -16,7 +16,7 @@ firmware, data pipeline.
 your project (Claude Code, Codex, any cloud session):
 
 > Run this from the project root and show me the output:
-> `git clone --depth 1 https://github.com/paarths-collab/user.git /tmp/ufqa && bash /tmp/ufqa/install.sh both .`
+> `git clone --depth 1 https://github.com/paarths-collab/user-flow-qa.git /tmp/ufqa && bash /tmp/ufqa/install.sh both .`
 > Then commit the files it lists under "git add" and push.
 
 `both` covers Claude Code, Codex and Cursor (Cursor reads `.agents/skills/` and `AGENTS.md`). Use `claude`, `codex` or `cursor` if you only use one. On
@@ -65,10 +65,10 @@ user-flow report.
 environments and organisations turn them off; then use "Start here"):
 
 ```
-/plugin install user-flow-qa --marketplace paarths-collab/user
+/plugin install user-flow-qa --marketplace paarths-collab/user-flow-qa
 ```
 
-On older Claude Code, two steps: `/plugin marketplace add paarths-collab/user`,
+On older Claude Code, two steps: `/plugin marketplace add paarths-collab/user-flow-qa`,
 then `/plugin install user-flow-qa@user-flow-qa`. Then, in each project, say
 "Set up user-flow QA" (the `uf-setup` skill creates `.userflow/` and the
 rules, and can enable the plugin for everyone on the repo, cloud sessions
