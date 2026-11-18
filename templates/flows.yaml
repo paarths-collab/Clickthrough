@@ -28,7 +28,7 @@ personas: []
 
 # Parts of the product, for working through a large product a piece at a time.
 areas: []
-#  - {id: A1, name: "Accounts", status: mapped}     # pending | mapped
+#  - {id: A1, name: "Accounts", status: mapped}     # pending | mapped | tested | excluded (say why in a note)
 
 # Everything a user can touch.
 surfaces: []

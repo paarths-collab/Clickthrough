@@ -33,7 +33,7 @@ SURFACE_TYPES = {"nav", "page", "form", "action", "message", "empty_state",
                  "endpoint", "mcp_tool", "cli", "job", "notification", "data"}
 SOURCES = {"intent", "code", "both"}
 PRIORITIES = {"P0", "P1", "P2"}
-VARIANTS = {"normal", "alternate", "wrong_input", "not_allowed", "interrupted",
+VARIANTS = {"normal", "alternate", "wrong_input", "not_allowed", "abuse", "interrupted",
             "empty", "return_visit", "handoff"}
 STATUSES = {"untested", "pass", "fail", "unverified", "blocked", "likely_broken"}
 CONFIDENCE = {"high", "medium", "low"}
@@ -125,8 +125,9 @@ def main():
             warn(f"{sid} ({s.get('name')}): promised in the intent, not found in the product")
 
     for area in items("areas"):
-        if area.get("status") == "pending":
-            warn(f"area {area.get('id')} ({area.get('name')}) is not mapped yet")
+        if area.get("status") not in ("mapped", "tested", "excluded"):
+            warn(f"area {area.get('id')} ({area.get('name')}) is not covered yet "
+                 "(status pending); the verdict cannot be READY until it is")
 
     # ---- flows ------------------------------------------------------------
     if stage >= 1:
@@ -250,7 +251,13 @@ def main():
             verdict = (f"CANNOT TELL, likely NOT READY ({n} P0 flow(s) look broken "
                        "in code; not run)")
         elif all(f.get("status") == "pass" for f in p0):
-            verdict = "READY"
+            open_areas = [a.get("id") for a in items("areas")
+                          if a.get("status") not in ("mapped", "tested", "excluded")]
+            if open_areas:
+                verdict = ("CANNOT TELL (every P0 flow written passed, but areas not covered: "
+                           + ", ".join(str(a) for a in open_areas) + ")")
+            else:
+                verdict = "READY"
         else:
             verdict = "CANNOT TELL (P0 flows not verified)"
         print(f"Verdict from the registry: {verdict}")

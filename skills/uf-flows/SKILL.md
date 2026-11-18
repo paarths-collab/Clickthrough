@@ -43,6 +43,7 @@ applies. Do not write variants that cannot happen.
 | `alternate` | does it another valid way (a different route, order or option). |
 | `wrong_input` | leaves a field empty, types something invalid, picks a bad file. They should be told what is wrong, in words. |
 | `not_allowed` | tries something their role or account should not do, including opening another user's item by changing the address. |
+| `abuse` | a security check from `uf-security`: the least-trusted caller (another tenant, lower role, logged out, API key, AI agent fed hostile text) tries what they must not. Pass: refused, told why, nothing changed, nothing leaked. |
 | `interrupted` | refreshes mid-way, presses back, double-clicks submit, closes the tab, or their session expires. |
 | `empty` | arrives with nothing yet: new account, no data, no results. |
 | `return_visit` | leaves and comes back later (fresh session, log in again): is what they did still there? |
@@ -80,6 +81,10 @@ Turn each suspicion noted during discovery into a flow a user could
 plausibly do (for example "types a display name that is just a number").
 Set priorities now, before any result is known. Changing one later needs a
 reason written in `decisions.md` and in the report.
+
+Then load `uf-security`, build its access map, and add an `abuse` flow
+for every check that applies (other tenant, lower role, logged out, API
+key, AI agent).
 
 Then load `uf-patterns` and go through it section by section. For every
 pattern that could apply to this product (a second route, an email, a

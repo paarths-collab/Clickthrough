@@ -20,6 +20,7 @@
   verdict. That runs in a separate, fresh session using the `uf-run`
   skill.
 - To check readiness or find what is broken for users, use the `uf-run`
-  skill. What to look for is in the `uf-patterns` skill; rules are in
-  `.userflow/guide.md`.
+  skill (it includes security checks from `uf-security`). To fix what an
+  audit found, use `uf-fix`, then a fresh `uf-run recheck`. What to look
+  for is in the `uf-patterns` skill; rules are in `.userflow/guide.md`.
 <!-- user-flow-qa:end -->

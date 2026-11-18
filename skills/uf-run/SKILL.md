@@ -26,6 +26,10 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
      stop for review. Record that the map and flows were not human-checked.
    - `recheck`: fixes were made after an earlier report. Go straight to
      `uf-evaluate` in recheck mode.
+   - `fix`: the request says "fix", "resolve" or "repair". Run the audit
+     first if there is no report for this commit, then follow `uf-fix`.
+     Fixing is builder work: say that a fresh session should run
+     `uf-run recheck` before anyone calls it ready.
    - `update`: the product changed since the registry was written. Run
      `uf-discover` in update mode, then carry on from there.
    If `.userflow/bin/new-run.sh` does not exist, the project is not set
@@ -50,7 +54,8 @@ not merge phases or skip one because it looks unnecessary.
 
 For a large product, do phases 2 to 5 one area at a time, P0 flows first.
 
-Keep `uf-patterns` at hand through every phase. It is the list of what
+Keep `uf-patterns` (what breaks for users) and `uf-security` (what an
+attacker or a key can do) at hand through every phase. It is the list of what
 usually breaks between the parts of a product and how to see each one.
 
 ## Finishing

@@ -71,9 +71,21 @@ to the result they can see and that is still there when they come back.
 | `.userflow/flows.yaml` | The registry: product, how to run it, personas, surfaces, goals, flows, status. Single source of truth. Committed. |
 | `.userflow/guide.md` | This file. |
 | `.userflow/tool-gaps.md` | Things you wanted to do and could not. Committed. |
-| `.userflow/bin/` | Helper scripts: `new-run.sh`, `collect-run.sh`, `uf-check.py`. |
+| `.userflow/bin/` | Helper scripts: `new-run.sh`, `collect-run.sh`, `uf-check.py`, `uf-inventory.py` (code dissection). |
 | `.userflow/runs/<run-id>/` | One folder per run: `run.json`, `decisions.md`, `report.md`, `evidence/`, `raw/`. Never committed. |
 | `userflow-tests/` | One test file per flow. Committed. |
+
+## Every finding is an evidence record
+
+Each finding, pass or fail, says:
+- **claim:** what works or what breaks, in the user's words;
+- **how known:** `ran` (seen in the running product), `traced` (followed
+  through the code, not run) or `read` (spotted in code, not followed);
+- **evidence:** screenshot, output, request and response, file and line;
+- **covered and not covered:** which routes, roles and data it applies to;
+- **unknowns:** what would change the conclusion, and what would confirm it.
+
+Never upgrade the "how known" in a summary: a traced finding stays traced.
 
 ## Recording a run
 
