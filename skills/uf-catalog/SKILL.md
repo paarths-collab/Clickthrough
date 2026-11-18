@@ -63,6 +63,26 @@ whether a flow is listed.
   exact);
 - the summary line shows the total, which is the "Y" in "tested X of Y".
 
-For a product with hundreds of surfaces, list area by area, but finish the
-list for every area before any testing starts. Commit the registry when the
-list is done, so a later session can pick it up.
+## Listing in parallel
+
+For more than a handful of areas, split the listing across helper agents,
+one area each, using the harness's parallel agents (Claude Code subagents,
+Codex or Cursor background agents); without them, list the areas one after
+another. Listing only reads the code and looks at the product, so helpers
+cannot spoil each other's data and can all run at once.
+
+- **Lead first:** run `uf-inventory.py`, walk the navigation, and split the
+  inventory into areas (by menu group, folder or feature). Give each area
+  an id (`A1`, `A2`, ...).
+- **Each helper gets:** its area's inventory items, the navigation for that
+  area, the intent sources, this skill and `uf-patterns`, `uf-security`,
+  and an id prefix to use (`A3-S01`, `A3-G01`, `A3-F001`) so ids never
+  collide. It returns its surfaces, goals and flows as YAML in the
+  registry's format. Helpers never write `flows.yaml`.
+- **Lead merges:** paste each area's YAML into the registry, join surfaces
+  two areas both claimed, add the workflows that cross areas (sign-up then
+  first task, invite then accept), then run `uf-check.py --stage flows`
+  until no entry point is uncovered.
+
+Finish the list for every area before any testing starts. Commit the
+registry when the list is done, so a later session can pick it up.

@@ -50,8 +50,8 @@ not merge phases or skip one because it looks unnecessary.
 |---|---|---|---|
 | 1 | `uf-preflight` | Does the software even run? | The real product is up with seed data (built with `uf-env` if needed), with an inbox if it sends email. If not: record the blocker and what a tester needs, then carry on; flows that cannot run are traced in code (guide, Trace mode). |
 | 2 | `uf-discover` | What can a user touch? | `uf-check.py --stage discover` has no errors. In review mode, the human has seen the map. |
-| 3 | `uf-catalog` + `uf-flows` | What will a user try to do, all of it? | Every entry point in the code map belongs to a surface, every surface has its flows, and `uf-check.py --stage flows` shows no uncovered entry points. The total is the "Y" in "tested X of Y". In review mode, the human has seen the list. |
-| 4 | `uf-parallel` with `uf-test` and `uf-cases` | How do we check each flow for real? | Every flow is tested or blocked with a reason, batch by batch, or `.userflow/next.md` says exactly what is left. |
+| 3 | `uf-catalog` + `uf-flows` (helpers in parallel, one area each) | What will a user try to do, all of it? | Every entry point in the code map belongs to a surface, every surface has its flows, and `uf-check.py --stage flows` shows no uncovered entry points. The total is the "Y" in "tested X of Y". In review mode, the human has seen the list. |
+| 4 | `uf-parallel` with `uf-test` and `uf-cases` (helpers in parallel, each with its own data) | How do we check each flow for real? | Every flow is tested or blocked with a reason, batch by batch, or `.userflow/next.md` says exactly what is left. |
 | 5 | `uf-evaluate` | What happens when a user does it? | The report is written, states "tested X of Y" per area, and `uf-check.py --stage evaluate` has no errors. |
 
 Do not test before the list is complete, and do not stop testing because
