@@ -22,6 +22,14 @@ run:
   services: []           # - {name: api, check: "GET /health", logs: "path or command"}
   stubs: []              # third-party services stubbed at the network edge, if any
 
+# Where flows can run. Only add staging and production when the human named them.
+targets: []
+#  - {name: local, url: "http://localhost:3000", data: writable-test, how: "userflow-tests/stack/up"}
+#  - {name: staging, url: "$UF_STAGING_URL", data: writable-test, tenants: ["Test A", "Test B"],
+#     accounts: {owner: UF_OWNER_EMAIL, member: UF_MEMBER_EMAIL}, inbox: UF_INBOX_API_KEY,
+#     confirmed_by: "human, in chat, <date>"}
+#  - {name: production, url: "https://...", data: read-only, confirmed_by: "human, in chat, <date>"}
+
 # Kinds of user. `auth` says how to become them (seeded account, sign-up, token).
 personas: []
 #  - {id: P1, name: "Owner", goal: "Run projects for a small team", auth: "alice@example.com / seeded"}
@@ -72,6 +80,7 @@ flows: []
 #    persisted: ["tasks row with this title under this project"]
 #    side_effects: []
 #    test_file: "userflow-tests/F001-add-task-project-page.test.js"   # null if the flow is blocked
+#    target: local        # where this flow should run: code | local | staging | production
 #    status: untested     # untested | pass | fail | unverified | blocked | likely_broken
 #    confidence: null     # likely_broken only: high | medium | low (traced in code, not run)
 #    trace: null          # blocked flows traced with no break found: "no break found in code"

@@ -38,7 +38,11 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
    up yet: load `uf-setup` and follow it first.
 3. **Start the run:** `.userflow/bin/new-run.sh --harness <claude|codex|cursor|other> --model <your model id> --mode <mode> --independent <yes|no>`.
    Keep the printed folder; everything from this session goes there.
-4. **Read `.userflow/flows.yaml`.** If it already has content, continue from
+4. **Check what the human provided** for this audit: a staging URL, test
+   accounts, an inbox, permissions (`UF_*` environment variables, the
+   registry's `targets:`). What is missing is asked for in preflight
+   (`uf-preflight` step 9), not guessed.
+5. **Read `.userflow/flows.yaml`.** If it already has content, continue from
    what is not done. Do not start again from nothing.
 
 ## The phases, in order: list everything, then check everything

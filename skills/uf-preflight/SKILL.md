@@ -62,10 +62,17 @@ Do them in order. Record the exact command and result for each.
    Each one you lack goes in `.userflow/tool-gaps.md` with what it will stop
    you from checking. Adding test tooling (kept inside `userflow-tests/`)
    is not a product change.
-9. **Note what users need that you may not have:** test accounts for each
-   role, email or SMS you cannot receive, third-party logins, payment test
-   keys. List them now so later phases can mark those flows `blocked`
-   instead of guessing.
+9. **Find the targets and ask for what is missing.** Look for a staging or
+   preview deployment (README, CI and deploy config, environment variables,
+   `UF_STAGING_URL`) and for anything the human already provided
+   (`UF_*` environment variables). For each target, check it answers, the
+   test accounts sign in, and the human has said its data is test data;
+   record it under `targets:` in the registry. Then list what flows will
+   need and you do not have (test accounts per role, an inbox the tests
+   can read, sandbox services, schema not in the repo, permission to
+   download tools) and ask for it with `.userflow/templates/tester-kit.md`,
+   as the guide's "Asking the human" section says. Only ask for what this
+   product actually needs.
 
 ## Write down
 

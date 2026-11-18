@@ -59,10 +59,12 @@ to the result they can see and that is still there when they come back.
    trace mode for the flows you cannot run.
 9. **Never touch production or shared data.** Before any flow writes data,
    find out where the database, storage, email and payment settings
-   point. Run only against a local or test instance. Never reset, seed,
-   migrate or write test data on a remote database unless the human said
-   it is a disposable test instance. If you cannot tell, stop and report
-   that as the blocker (verdict CANNOT TELL).
+   point. Each target has its own rule (see "Targets" below): local copy,
+   anything goes; staging, only with the accounts and tenants the human
+   named, after they said it is test data; production, read-only checks
+   only, and only if the human allowed them. Never reset, seed or migrate
+   a remote database. If you cannot tell which target you are on, stop
+   and report that as the blocker (verdict CANNOT TELL).
 
 ## Files
 
@@ -77,6 +79,33 @@ to the result they can see and that is still there when they come back.
 | `.userflow/batches.md`, `.userflow/next.md` | Batch plan and "continue here" note for long audits (`uf-parallel`). Committed. |
 | `.userflow/cases/<surface-id>.md` | Component card and every case for one component (`uf-cases`). Committed. |
 | `userflow-tests/` | One test file per flow, plus `<surface-id>.cases.*` table tests. Committed. |
+
+## Targets: code, local copy, staging, production
+
+Test each flow where it can be tested for real and safely:
+
+| Target | Use it for | Rule |
+|---|---|---|
+| Code | finding where a flow breaks; flows nothing can run | read only |
+| Local copy (`uf-env`) | destructive, security and permission flows; resets | anything, test data only |
+| Staging / preview | flows that need real services: sign-in hub, email, files, messaging, AI, integrations | only the human's test accounts and tenants; create and delete only inside them; no resets; clean up |
+| Production | read-only smoke: pages load, links work, logged-out API calls are refused | only if the human allowed it; nothing created, changed or deleted; slow request rate |
+
+Destructive and attack flows run on the local copy only, never on staging
+or production. Record in each flow where it was meant to run (`target`)
+and where it did run (`last_run.target`). A flow is `blocked` only when it
+can run on none of them.
+
+## Asking the human for what is missing
+
+When something the audit needs is missing (a staging URL, a test inbox,
+test accounts, sandbox services, a schema that is not in the repo,
+permission to download tools), fill `.userflow/templates/tester-kit.md`
+with only the items that apply and say which flows each unlocks. In review
+mode, ask before testing the flows that need it. In auto mode, carry on
+with what is possible and put the kit at the top of the report and in
+`.userflow/next.md`. Secrets go into environment variables, never into the
+chat. Never ask for production write access or real people's mailboxes.
 
 ## Every finding is an evidence record
 

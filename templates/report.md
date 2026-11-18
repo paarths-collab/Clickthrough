@@ -113,8 +113,18 @@ Worst first. Not confirmed: each needs one real run.
 
 ## What a tester needs to run this for real
 
-<Services, test accounts per role, seed data, environment variables,
-inbox. Exactly enough for the next run to pass the blocked flows.>
+<The filled tester kit (`.userflow/templates/tester-kit.md`): only the
+items this product needs, each with the flows it unlocks. Exactly enough
+for the next run to test the blocked flows.>
+
+## Where flows ran
+
+| Target | URL or how started | Data rule | Flows run |
+|---|---|---|---|
+| Code | | read only | |
+| Local copy | | test data | |
+| Staging | | human's test accounts and tenants | |
+| Production | | read only | |
 
 ## Not verified
 
