@@ -27,8 +27,11 @@ Do them in order. Record the exact command and result for each.
    this does and does not tell you: these tests were written by the builder
    and may pass while the product is unusable.
 5. **Boot the whole stack with seed data.** Every part: frontend, backend,
-   database, workers, MCP servers. If there is no single command that does
-   it, write down the sequence that works and put it in the registry.
+   database, workers, MCP servers. If `userflow-tests/stack/` exists, use
+   its `up` and `seed`. If the product will not start and nothing like it
+   exists, load `uf-env` and build one before giving up. If there is no
+   single command that does it, write down the sequence that works and put
+   it in the registry.
 6. **Check each part really responds** through the door a user uses (see
    the table in `uf-patterns`). For example: the entry page loads in a real
    browser without errors; an endpoint answers; the CLI's `--help` and one

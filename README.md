@@ -49,11 +49,13 @@ user-flow report.
 
 | Path | What it is |
 |---|---|
-| `skills/` | `uf-run` (full audit, entry point) and its phases: `uf-preflight`, `uf-discover`, `uf-flows`, `uf-test`, `uf-evaluate`. `uf-patterns`: what breaks for users and how to see it. `uf-security`: what another tenant, a lower role, an API key or an AI agent can do that they must not. `uf-fix`: fix findings one at a time, each proven by a real run. `uf-ready-check`: the builder's check before saying "done". `uf-setup`: installs into a project. |
+| `skills/` | `uf-run` (full audit, entry point) and its phases: `uf-preflight`, `uf-discover`, `uf-flows`, `uf-test`, `uf-evaluate`. `uf-patterns`: what breaks for users and how to see it. `uf-security`: what another tenant, a lower role, an API key or an AI agent can do that they must not. `uf-env`: a disposable local test copy of the product, built once and reused. `uf-fix`: fix findings one at a time, each proven by a real run. `uf-score`: score an audit against known issues. `uf-ready-check`: the builder's check before saying "done". `uf-setup`: installs into a project. |
 | `templates/` | Shared rules (`guide.md`), the flow registry (`flows.yaml`), report, decision log, tool-gaps log, CLAUDE.md/AGENTS.md rules. |
 | `scripts/` | `uf-inventory.py` (dissects the code into pages, endpoints, CLI commands, agent tools, jobs, webhooks, outbound calls, emails, destructive writes, env vars), `uf-check.py` (registry validator and verdict), `new-run.sh`, `collect-run.sh`. |
 | `install.sh` | `./install.sh claude|codex|both|plugin <project>` |
-| `experiment/` | Before/after protocol, scorecard, answer key for the sample app. |
+| `experiment/` | Before/after protocol, scorecard, answer keys for the sample apps, a known-issues template. |
+| `evals/` | Eval cases for the skills themselves: `claude plugin eval .` runs each with and without the plugin. |
+| `templates/ci-github.yml` | GitHub Actions workflow that runs the test stack and every flow test on each pull request. |
 | `sample-app/` | Tasklet, a small app with ten planted user-flow bugs. Its unit tests pass. Good for a first smoke run. |
 | `sample-app-hard/` | Helpline, a support inbox with three roles, a web app, a background worker, an MCP server and 25 planted bugs in four tiers of difficulty. Its tests pass. Use this one for before/after comparisons. |
 
@@ -91,6 +93,8 @@ Three ways to use it:
 | Any time you look for bugs | `uf-patterns` | "Find what is broken for users. Use uf-patterns." |
 | Security review | `uf-security` | "Security audit. Use uf-security." (also part of every `uf-run`) |
 | Fix what an audit found | `uf-fix` | "Fix the findings. Use uf-fix." Then a **new** session: "Use uf-run recheck." |
+| App can't be started for testing | `uf-env` | "Build a test environment. Use uf-env." (preflight also uses it when the app won't start) |
+| Score an audit | `uf-score` | In a **different** session: "Score this audit against my known issues. Use uf-score." |
 
 Requirements: bash and git to install; Python 3 with PyYAML for
 `uf-check.py`. The agent picks its own tools to drive your product

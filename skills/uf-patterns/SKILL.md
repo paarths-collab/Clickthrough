@@ -195,6 +195,29 @@ A few breaks that only show outside the web:
 35. **Dead ends.** Menu item opens a 404; a working page has no link.
     *Check:* click every menu item as every role; list pages with no way in.
 
+## L. Everyone can use it (accessibility and layout)
+
+36. **Keyboard only.** Every flow can be done with Tab, Enter, Space and
+    Escape; focus is visible and lands somewhere sensible after a dialog.
+    *Check:* walk the P0 flows without a mouse.
+37. **Screen readers.** Inputs have labels, buttons have names, images
+    have alternatives, errors are announced. *Check:* read the
+    accessibility tree, or run an automated checker (axe, pa11y,
+    Lighthouse) on each main screen.
+38. **Phone width and zoom.** At 375 px wide and at 200% zoom nothing is
+    cut off or needs sideways scrolling, and buttons can be tapped.
+    *Check:* run the P0 flows at phone size.
+
+## M. Existing users after an update
+
+39. **Old data, new code.** Records created before a migration still open,
+    edit and show correctly. *Check:* seed with the previous version (or
+    old-shaped data), upgrade, run the flows.
+40. **Old links and sessions.** Bookmarks, links in old emails and
+    signed-in sessions survive a deploy. Old clients (mobile apps, CLI
+    versions, API consumers) against the new server still work or get a
+    clear message.
+
 ## Before you say anything works
 
 Ask, for each goal you checked:

@@ -72,6 +72,20 @@ collect_claude() {
     encoded="$(printf '%s' "$candidate" | sed 's/[^A-Za-z0-9]/-/g')"
     if [ -d "$base/$encoded" ]; then dir="$base/$encoded"; break; fi
   done
+  if [ -z "$dir" ] && [ -z "$session" ] && [ -d "$base" ]; then
+    # Fallback (cloud sessions, sessions started in a parent folder): the
+    # newest session log whose start names this project folder.
+    local f best=""
+    while IFS= read -r f; do
+      if head -c 20000 "$f" 2>/dev/null | grep -qF "\"cwd\":\"$project"; then
+        if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best="$f"; fi
+      fi
+    done < <(find "$base" -maxdepth 2 -name '*.jsonl' -mmin -1440 2>/dev/null)
+    if [ -n "$best" ]; then
+      session="$best"
+      echo "claude: no folder named after this project; using the newest log that mentions it" >&2
+    fi
+  fi
   if [ -z "$dir" ] && { [ -z "$session" ] || [ ! -f "$session" ]; }; then
     echo "No Claude Code logs for this project at $base/$encoded" >&2
     echo "If the session was started in another folder, or you are a subagent, pass --session <log file>." >&2

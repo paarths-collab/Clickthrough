@@ -138,7 +138,7 @@ fi
 uf="$project/.userflow"
 mkdir -p "$uf/bin" "$uf/templates" "$uf/runs" "$project/userflow-tests"
 cp "$pack/templates/guide.md" "$uf/guide.md"
-cp "$pack/templates/report.md" "$pack/templates/decisions.md" "$uf/templates/"
+cp "$pack/templates/report.md" "$pack/templates/decisions.md" "$pack/templates/ci-github.yml" "$uf/templates/"
 cp "$pack/scripts/new-run.sh" "$pack/scripts/collect-run.sh" "$pack/scripts/uf-check.py" "$pack/scripts/uf-inventory.py" "$uf/bin/"
 chmod +x "$uf/bin/new-run.sh" "$uf/bin/collect-run.sh" "$uf/bin/uf-check.py" "$uf/bin/uf-inventory.py"
 echo "userflow -> .userflow/ (guide, templates, bin)"

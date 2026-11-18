@@ -20,6 +20,11 @@ words: "add a task to a project", not "POST /api/tasks". Add each to
 `goals:`. Take goals from the intent, not only from the surfaces, so that a
 goal the product forgot to build still appears.
 
+If you can read real usage (error tracker, server logs, support tickets,
+analytics) without changing anything, use it: the paths users take most
+and the errors they hit most become P0 goals and flows first. Never copy
+personal data from them into the registry.
+
 ## 2. Every route to each goal
 
 Often there is more than one way to do the same thing: a button on the

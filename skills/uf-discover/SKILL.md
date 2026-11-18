@@ -19,7 +19,8 @@ builder made and stop noticing the product that was asked for.
 
 ### 1. Intent: what is the product for?
 
-Read the PRD, spec, README, landing-page copy, issue tracker, and anything
+Read the PRD, spec, README, landing-page copy, issue tracker, error
+tracker and support tickets (read-only), and anything
 the human told you. Write one paragraph in `product.purpose` and list where
 it came from in `product.intent_sources`.
 

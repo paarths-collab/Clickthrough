@@ -1,0 +1,55 @@
+# User-flow tests on every pull request.
+#
+# Copy to .github/workflows/userflow.yml once userflow-tests/stack/ exists
+# (see the uf-env skill), then adjust the "Set up the toolchain" step for
+# this project's language. It starts the disposable test stack, runs every
+# flow test, and keeps the evidence as a build artifact.
+name: user flows
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set up the toolchain: replace with what this project needs, e.g.
+      # actions/setup-node, actions/setup-python, dtolnay/rust-toolchain.
+      - name: Set up the toolchain
+        run: echo "Add the project's toolchain setup here"
+
+      - name: Install
+        run: echo "Add the project's install command here (npm ci, pip install -r ..., cargo build)"
+
+      - name: Start the test stack
+        run: bash userflow-tests/stack/up && bash userflow-tests/stack/seed
+
+      - name: Run the flow tests
+        env:
+          UF_EVIDENCE_DIR: ${{ github.workspace }}/userflow-evidence
+        run: |
+          # The command recorded in .userflow/flows.yaml under run.test_command.
+          python3 - <<'PY' > /tmp/uf-test-command
+          import yaml
+          print(yaml.safe_load(open(".userflow/flows.yaml"))["run"]["test_command"])
+          PY
+          bash -c "$(cat /tmp/uf-test-command)"
+
+      - name: Stop the test stack
+        if: always()
+        run: bash userflow-tests/stack/down || true
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: userflow-evidence
+          path: userflow-evidence
+          if-no-files-found: ignore
