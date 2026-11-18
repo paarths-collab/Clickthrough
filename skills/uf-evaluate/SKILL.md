@@ -46,7 +46,11 @@ Follow `.userflow/guide.md`. Log each step in `decisions.md`.
    was not done.
 5. **Sweep the navigation.** As each persona, try every item the product
    offers in its menus (or `--help`, docs, exported API). Each one must
-   lead to something real and working. Record each result in the
+   lead to something real and working, and record every failed request
+   (any 4xx or 5xx, network error) and console error on each page while it
+   loads and settles. A page that looks fine while one of its requests
+   fails is a finding (data silently missing), unless the failure is an
+   expected refusal you can name. Record each result in the
    report's Navigation table, with dead items and pages that have no way in.
 6. **Collect errors seen along the way**, including during flows that
    passed: console errors, failed requests, and errors in the server log

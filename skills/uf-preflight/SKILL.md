@@ -39,6 +39,12 @@ Do them in order. Record the exact command and result for each.
    example; the app opens its first screen; the MCP server lists its tools;
    every worker process is up. Read the logs after start. Errors at
    startup are findings.
+6b. **An inbox, if the product sends anything.** If the code map lists
+   email, SMS or auth links, or the intent mentions an email (invites,
+   sign-up confirmation, password reset, notifications), a local mail
+   catcher the tests can read is required, not optional. Without it,
+   invite, sign-up and reset flows cannot be checked at all. Build it
+   (`uf-env`) before moving on, or record exactly why it is impossible.
 7. **Check where data goes, then find or make a reset.** First read the
    environment and config: which database, storage, email and payment
    services will the flows write to? Local or a test instance: carry on.

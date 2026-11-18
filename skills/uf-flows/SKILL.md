@@ -5,6 +5,10 @@ description: Phase 3 of user-flow QA. Turn the surface map into the full list of
 
 # uf-flows: what will a user try to do?
 
+This skill writes each flow in detail. `uf-catalog` makes sure the list is
+complete for the whole product (every entry point in the code map, the
+standard flows for every surface). Use both: the list first, everywhere.
+
 A flow is one user getting one thing done, from where they start to a
 result they can see and that is still there later. You are writing down
 every flow a real user would attempt, including the ones where they make a

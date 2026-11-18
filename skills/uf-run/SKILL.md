@@ -32,6 +32,8 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
      `uf-run recheck` before anyone calls it ready.
    - `update`: the product changed since the registry was written. Run
      `uf-discover` in update mode, then carry on from there.
+   - `continue`: an earlier session left `.userflow/next.md`. Read it and
+     `batches.md`, and carry on testing the next batches (`uf-parallel`).
    If `.userflow/bin/new-run.sh` does not exist, the project is not set
    up yet: load `uf-setup` and follow it first.
 3. **Start the run:** `.userflow/bin/new-run.sh --harness <claude|codex|cursor|other> --model <your model id> --mode <mode> --independent <yes|no>`.
@@ -39,20 +41,23 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
 4. **Read `.userflow/flows.yaml`.** If it already has content, continue from
    what is not done. Do not start again from nothing.
 
-## The five phases, in order
+## The phases, in order: list everything, then check everything
 
 Each phase is its own skill. Load and follow it fully before moving on. Do
 not merge phases or skip one because it looks unnecessary.
 
 | # | Skill | Question it answers | Moves on when |
 |---|---|---|---|
-| 1 | `uf-preflight` | Does the software even run? | The real product is up with seed data. If not: record the blocker and what a tester needs, then carry on; flows that cannot run are traced in code (guide, Trace mode). |
+| 1 | `uf-preflight` | Does the software even run? | The real product is up with seed data (built with `uf-env` if needed), with an inbox if it sends email. If not: record the blocker and what a tester needs, then carry on; flows that cannot run are traced in code (guide, Trace mode). |
 | 2 | `uf-discover` | What can a user touch? | `uf-check.py --stage discover` has no errors. In review mode, the human has seen the map. |
-| 3 | `uf-flows` | What will a user try to do? | `uf-check.py --stage flows` has no errors. In review mode, the human has seen the flows. |
-| 4 | `uf-test` | How do we check each flow for real? | Every flow has a test file, or is marked blocked with a reason. |
-| 5 | `uf-evaluate` | What happens when a user does it? | The report is written and `uf-check.py --stage evaluate` has no errors. |
+| 3 | `uf-catalog` + `uf-flows` | What will a user try to do, all of it? | Every entry point in the code map belongs to a surface, every surface has its flows, and `uf-check.py --stage flows` shows no uncovered entry points. The total is the "Y" in "tested X of Y". In review mode, the human has seen the list. |
+| 4 | `uf-parallel` with `uf-test` and `uf-cases` | How do we check each flow for real? | Every flow is tested or blocked with a reason, batch by batch, or `.userflow/next.md` says exactly what is left. |
+| 5 | `uf-evaluate` | What happens when a user does it? | The report is written, states "tested X of Y" per area, and `uf-check.py --stage evaluate` has no errors. |
 
-For a large product, do phases 2 to 5 one area at a time, P0 flows first.
+Do not test before the list is complete, and do not stop testing because
+the P0 flows are done: P0 decides the order, not the scope. If the session
+cannot finish, follow `uf-parallel` section 5 (commit, `next.md`, tell the
+human to continue) instead of ending with "not covered".
 
 Keep `uf-patterns` (what breaks for users) and `uf-security` (what an
 attacker or a key can do) at hand through every phase. It is the list of what
@@ -76,7 +81,8 @@ usually breaks between the parts of a product and how to see each one.
 
 - **READY**: every P0 flow passed with evidence on this commit.
 - **NOT READY**: at least one P0 flow failed.
-- **CANNOT TELL**: the product would not run, or P0 flows are unverified.
+- **CANNOT TELL**: the product would not run, P0 flows are unverified, or
+  part of the list is still untested. Say how much: "tested X of Y".
 
 "It should work", "the code looks correct" and "tests pass" are none of
 these. If you did not see it work, you do not know that it works.

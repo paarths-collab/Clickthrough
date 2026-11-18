@@ -19,6 +19,8 @@ Exit code 1 if there are errors. Warnings do not fail the check. Needs PyYAML
 and log a tool gap.
 """
 import argparse
+import fnmatch
+import json
 import os
 import sys
 from collections import Counter, defaultdict
@@ -236,6 +238,47 @@ def main():
             if status == "untested":
                 warn(f"{fid}: still untested")
 
+    # ---- coverage against the code map ----------------------------------
+    uncovered = []
+    inv_path = os.path.join(root, ".userflow", "inventory.json")
+    if stage >= 1 and os.path.exists(inv_path):
+        try:
+            inventory = json.load(open(inv_path, encoding="utf-8")).get("items", [])
+        except (ValueError, OSError) as exc:
+            inventory = []
+            warn(f".userflow/inventory.json could not be read: {exc}")
+        patterns = []
+        for s in surfaces:
+            for value in [s.get("location")] + list(s.get("covers") or []):
+                if value:
+                    patterns.append(str(value).strip().rstrip("/") or "/")
+
+        def covered(item):
+            what = str(item.get("what", "")).strip()
+            path_part = what.split(" ", 1)[1] if " " in what else what
+            where = str(item.get("where", "")).rsplit(":", 1)[0]
+            for pat in patterns:
+                for candidate in (what, path_part.rstrip("/") or "/", where):
+                    if candidate == pat or fnmatch.fnmatchcase(candidate, pat):
+                        return True
+            return False
+
+        kinds = {"page", "route", "cli", "mcp_tool", "job", "webhook"}
+        for item in inventory:
+            if item.get("kind") in kinds and not item.get("test") and not covered(item):
+                uncovered.append(item)
+        if uncovered:
+            by_kind = Counter(i["kind"] for i in uncovered)
+            summary = ", ".join(f"{k} {v}" for k, v in sorted(by_kind.items()))
+            listing = "; ".join(f"{i['kind']} {i['what']} ({i['where']})" for i in uncovered[:15])
+            more = f" ... and {len(uncovered) - 15} more" if len(uncovered) > 15 else ""
+            err(f"{len(uncovered)} entry points in the code map belong to no surface ({summary}). "
+                f"Add surfaces (use `covers:` globs to group), or a surface with `excluded:` and a "
+                f"reason: {listing}{more}")
+    elif stage >= 1:
+        warn("no .userflow/inventory.json: run uf-inventory.py --json --out .userflow/inventory.json "
+             "so coverage can be checked against the code")
+
     # ---- summary ----------------------------------------------------------
     print(f"{args.file}: {len(persona_ids)} personas, {len(surface_ids)} surfaces, "
           f"{len(goal_ids)} goals, {len(flow_ids)} flows  (stage: {args.stage})")
@@ -252,6 +295,12 @@ def main():
             if total:
                 detail = ", ".join(f"{k} {v}" for k, v in sorted(counts.items()))
                 print(f"  {priority}: {total} flows ({detail})")
+    tested_statuses = {"pass", "fail", "likely_broken", "blocked"}
+    untested = [f for f in flows if f.get("status") not in tested_statuses]
+    if stage >= 1 and flows:
+        done = len(flows) - len(untested)
+        print(f"  Coverage: tested {done} of {len(flows)} flows"
+              + (f"; {len(untested)} still to test" if untested else ""))
     for line in warnings:
         print(f"WARN  {line}")
     for line in errors:
@@ -272,7 +321,10 @@ def main():
         elif all(f.get("status") == "pass" for f in p0):
             open_areas = [a.get("id") for a in items("areas")
                           if a.get("status") not in ("mapped", "tested", "excluded")]
-            if not open_areas and shallow:
+            if untested:
+                verdict = (f"CANNOT TELL (every P0 flow passed, but tested only "
+                           f"{len(flows) - len(untested)} of {len(flows)} flows)")
+            elif not open_areas and shallow:
                 verdict = ("CANNOT TELL (every P0 flow written passed, but these P0 components or "
                            "workflows were not tested in depth with uf-cases: "
                            + ", ".join(str(x) for x in shallow[:10])

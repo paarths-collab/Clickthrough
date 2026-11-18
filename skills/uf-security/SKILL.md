@@ -117,5 +117,9 @@ Severity in the finding, separate from flow priority:
   weak session handling.
 - **Low:** hardening and drift.
 
+Fill the "Security checklist" table in the report: every one of the 17
+checks, with ran, traced or not done (and why). A check left out of the
+table is a gap in the audit.
+
 Any Critical or High that is `fail` or `likely_broken` makes the verdict
 NOT READY or "CANNOT TELL, likely NOT READY", whatever the flow priority.
