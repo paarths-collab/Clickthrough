@@ -44,7 +44,7 @@ findings.
 3. **Mass assignment.** Send extra fields (`role`, `owner_id`, `workspace_id`,
    `price`) in create/update requests. Code: allow-list of writable fields.
 
-**B. Keys and AI agents** (the "agents propose, humans dispose" rule)
+**B. Keys and AI agents** (whatever needs a human must not be doable by a key or an agent alone)
 4. **What a key can do that a human must approve.** With each key type,
    try approve, delete, change settings, create keys, invite, export,
    create webhooks or integrations, rotate secrets. Code: every gate that
