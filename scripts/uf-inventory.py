@@ -34,8 +34,26 @@ SKIP_DIRS = {".git", "node_modules", "vendor", "dist", "build", "out", "target",
 CODE_EXT = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".rb", ".go", ".rs",
             ".java", ".kt", ".kts", ".scala", ".cs", ".php", ".ex", ".exs", ".swift",
             ".html", ".c", ".cc", ".cpp", ".h", ".hpp", ".vue", ".svelte", ".dart", ".sql"}
-TEST_HINT = re.compile(r"(^|[/\\])(tests?|__tests__|spec|specs|e2e|fixtures?|mocks?)([/\\]|$)|"
-                       r"[._-](test|spec|fixtures?|mocks?|stories|story)\.[a-z]+$", re.I)
+# A file is test code when its own name says so (x.test.ts, x_test.go,
+# test_x.py, XTest.java, x.spec.js, fixtures, stories) or it sits in a test
+# folder that is not part of the app's routes. A folder merely named
+# "tests" inside app/, pages/ or routes/ is a real screen (e.g. "Test runs").
+TEST_FILE = re.compile(r"([._-](test|spec|fixtures?|mocks?|stories|story)\.[a-z]+$)|"
+                       r"(^test_[^/]+\.py$)|(_test\.(go|py|rb|exs)$)|((Test|Tests|IT|Spec)\.(java|kt|cs|scala)$)", re.I)
+TEST_DIR = re.compile(r"(^|/)(tests?|__tests__|spec|specs|e2e|fixtures?|__mocks__|mocks?|testdata|test-data)(/|$)", re.I)
+ROUTE_DIR = re.compile(r"(^|/)(app|pages|routes|views|screens)/")
+
+
+def is_test_path(rel):
+    rel = rel.replace(os.sep, "/")
+    name = rel.rsplit("/", 1)[-1]
+    if TEST_FILE.search(name):
+        return True
+    if TEST_DIR.search(rel):
+        # Inside the app's route tree, a "tests" folder is a page, not test code.
+        before = TEST_DIR.search(rel).start()
+        return not ROUTE_DIR.search(rel[:before + 1])
+    return False
 MAX_BYTES = 1_500_000
 
 M = r"(get|post|put|patch|delete|options|head|all)"
@@ -142,7 +160,7 @@ def scan(root):
             ext = os.path.splitext(name)[1].lower()
             if ext not in CODE_EXT and name not in ("vercel.json", "crontab"):
                 continue
-            is_test = bool(TEST_HINT.search(rel.replace(os.sep, "/")))
+            is_test = is_test_path(rel)
             page = page_from_path(rel)
             if page and not is_test:
                 found.append({"kind": "page", "what": page or "/", "where": f"{rel}:1", "test": False})

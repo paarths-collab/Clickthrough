@@ -73,7 +73,22 @@ install_skills() { # $1 = skills folder inside the project
 add_rules() { # $1 = instructions file inside the project
   local file="$project/$1"
   if [ -f "$file" ] && grep -q 'user-flow-qa:start' "$file"; then
-    echo "rules    -> $1 already has them"
+    # Replace the block between the markers with the current rules; leave
+    # everything outside the markers exactly as it is.
+    local tmp="$file.uf-tmp"
+    awk -v snippet="$pack/templates/rules-snippet.md" '
+      /<!-- user-flow-qa:start -->/ { while ((getline line < snippet) > 0) print line; skip = 1; next }
+      /<!-- user-flow-qa:end -->/ { skip = 0; next }
+      !skip { print }
+    ' "$file" > "$tmp"
+    if cmp -s "$tmp" "$file"; then
+      rm -f "$tmp"
+      echo "rules    -> $1 already up to date"
+    else
+      mv "$tmp" "$file"
+      echo "rules    -> updated the user-flow QA block in $1"
+      touch_path "$1"
+    fi
     return
   fi
   if [ -s "$file" ]; then printf '\n' >> "$file"; fi
