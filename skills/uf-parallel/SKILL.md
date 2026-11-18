@@ -5,6 +5,9 @@ description: Test a long flow list (hundreds of flows) by splitting it into batc
 
 # Check all of it: batches, helpers, and carrying on
 
+(Listing the flows in parallel is in `uf-catalog`. This skill is for
+checking them, where shared test data makes parallel work harder.)
+
 One agent cannot write and run three hundred flows in one session. The
 work has to be split and continued, without anyone stopping early or two
 helpers breaking each other's data.
