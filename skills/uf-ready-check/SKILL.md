@@ -48,11 +48,14 @@ session with `uf-run`.
    check anything it sends or writes, and look at what was saved.
 4. **Try it wrong once.** One wrong input, and, if roles exist, one user
    who must not be allowed. They must be told why, and nothing must leak.
-5. **Run the questions.** Load `uf-patterns` and go through the sections
+5. **Go deep on what you built.** For each component you added or
+   changed, follow `uf-cases` at P1 depth at least: every value once,
+   boundaries, each role, every action in every state.
+6. **Run the questions.** Load `uf-patterns` and go through the sections
    that match the layers you touched. Each "Check" that applies, do it.
-6. **Confirm it is still alive.** Every process still running, no errors
+7. **Confirm it is still alive.** Every process still running, no errors
    or crashes in the logs from your flows.
-7. **Leave a test behind:** one test per goal you walked, in
+8. **Leave a test behind:** one test per goal you walked, in
    `userflow-tests/`, doing what you did through the same door. Use the
    project's own test runner if it can.
 

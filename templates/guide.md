@@ -73,7 +73,8 @@ to the result they can see and that is still there when they come back.
 | `.userflow/tool-gaps.md` | Things you wanted to do and could not. Committed. |
 | `.userflow/bin/` | Helper scripts: `new-run.sh`, `collect-run.sh`, `uf-check.py`, `uf-inventory.py` (code dissection). |
 | `.userflow/runs/<run-id>/` | One folder per run: `run.json`, `decisions.md`, `report.md`, `evidence/`, `raw/`. Never committed. |
-| `userflow-tests/` | One test file per flow. Committed. |
+| `.userflow/cases/<surface-id>.md` | Component card and every case for one component (`uf-cases`). Committed. |
+| `userflow-tests/` | One test file per flow, plus `<surface-id>.cases.*` table tests. Committed. |
 
 ## Every finding is an evidence record
 

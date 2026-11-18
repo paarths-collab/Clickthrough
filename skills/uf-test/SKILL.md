@@ -52,7 +52,10 @@ must be running.
    wait on "network idle" or a fixed pause: on an already-loaded page those
    return before the product has answered, and the check after them reads
    the old screen.
-9. **Do not touch application code.** If a flow cannot be tested without a
+9. **Component cases are table-driven.** The cases from `uf-cases` go in
+   `userflow-tests/<surface-id>.cases.<ext>`, one row per case, through
+   the same door as the flows.
+10. **Do not touch application code.** If a flow cannot be tested without a
    change to the product, mark it `blocked` and log a tool gap.
 
 ## What each test must check

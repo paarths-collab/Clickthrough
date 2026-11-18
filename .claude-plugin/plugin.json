@@ -1,6 +1,6 @@
 {
   "name": "user-flow-qa",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Check a product the way its users use it, not by reviewing code. Maps what a user can touch, lists every user flow and every route to each goal, tests each flow against the running product, and reports per flow with evidence. Includes a catalogue of what breaks between frontend, backend, database, jobs, email and MCP, and a short self-check for building sessions. Works for any language and kind of product.",
   "author": {
     "name": "paarths-collab"

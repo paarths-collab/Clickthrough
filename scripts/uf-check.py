@@ -178,6 +178,25 @@ def main():
             warn(f"no flow at all for variant(s): {', '.join(sorted(missing))}")
 
     # ---- tests ------------------------------------------------------------
+    shallow = []  # P0 components / workflows with no uf-cases coverage
+    if stage >= 2:
+        deep_types = {"page", "form", "action", "endpoint", "mcp_tool", "cli"}
+        p0_surfaces = {sid for f in flows if f.get("priority") == "P0" for sid in (f.get("surfaces") or [])}
+        for s in surfaces:
+            sid = s.get("id")
+            if sid not in p0_surfaces or s.get("type") not in deep_types or s.get("excluded"):
+                continue
+            path = s.get("cases")
+            if not path:
+                shallow.append(sid)
+                warn(f"{sid} ({s.get('name')}): used by a P0 flow but has no `cases` file (uf-cases)")
+            elif not os.path.exists(os.path.join(root, str(path))):
+                warn(f"{sid}: cases file does not exist: {path}")
+        p0_goals = {f.get("goal") for f in flows if f.get("priority") == "P0"}
+        for g in items("goals"):
+            if g.get("id") in p0_goals and not g.get("cases"):
+                shallow.append(g.get("id"))
+                warn(f"goal {g.get('id')} ({g.get('title')}): P0 workflow has no `cases` file (uf-cases, section 6)")
     if stage >= 2:
         for f in flows:
             if f.get("status") in ("blocked", "likely_broken"):
@@ -253,7 +272,12 @@ def main():
         elif all(f.get("status") == "pass" for f in p0):
             open_areas = [a.get("id") for a in items("areas")
                           if a.get("status") not in ("mapped", "tested", "excluded")]
-            if open_areas:
+            if not open_areas and shallow:
+                verdict = ("CANNOT TELL (every P0 flow written passed, but these P0 components or "
+                           "workflows were not tested in depth with uf-cases: "
+                           + ", ".join(str(x) for x in shallow[:10])
+                           + (" ..." if len(shallow) > 10 else "") + ")")
+            elif open_areas:
                 verdict = ("CANNOT TELL (every P0 flow written passed, but areas not covered: "
                            + ", ".join(str(a) for a in open_areas) + ")")
             else:

@@ -87,6 +87,11 @@ plausibly do (for example "types a display name that is just a number").
 Set priorities now, before any result is known. Changing one later needs a
 reason written in `decisions.md` and in the report.
 
+Then load `uf-cases` and go deep on two levels: every component used by a
+P0 flow (forms, lists, dialogs, endpoints, commands, tools), and every P0
+goal as a whole workflow (all paths, every way of leaving the path, every
+handoff between steps and people). P1 gets the lighter depth it describes.
+
 Then load `uf-security`, build its access map, and add an `abuse` flow
 for every check that applies (other tenant, lower role, logged out, API
 key, AI agent).
