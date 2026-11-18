@@ -114,7 +114,7 @@ enable_plugin() { # project settings that make Claude Code load the plugin
 {
   "extraKnownMarketplaces": {
     "user-flow-qa": {
-      "source": { "source": "github", "repo": "paarths-collab/user" }
+      "source": { "source": "github", "repo": "paarths-collab/user-flow-qa" }
     }
   },
   "enabledPlugins": {
@@ -130,7 +130,7 @@ path = sys.argv[1]
 with open(path, encoding="utf-8") as f:
     data = json.load(f)
 data.setdefault("extraKnownMarketplaces", {})["user-flow-qa"] = {
-    "source": {"source": "github", "repo": "paarths-collab/user"}}
+    "source": {"source": "github", "repo": "paarths-collab/user-flow-qa"}}
 data.setdefault("enabledPlugins", {})["user-flow-qa@user-flow-qa"] = True
 with open(path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
@@ -139,7 +139,7 @@ PY
     echo "plugin   -> added the marketplace and plugin to .claude/settings.json"
   else
     echo "plugin   -> .claude/settings.json exists and python3 is missing; add by hand:" >&2
-    echo '            "extraKnownMarketplaces": {"user-flow-qa": {"source": {"source": "github", "repo": "paarths-collab/user"}}}' >&2
+    echo '            "extraKnownMarketplaces": {"user-flow-qa": {"source": {"source": "github", "repo": "paarths-collab/user-flow-qa"}}}' >&2
     echo '            "enabledPlugins": {"user-flow-qa@user-flow-qa": true}' >&2
   fi
 }
