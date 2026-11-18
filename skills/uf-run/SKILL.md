@@ -71,7 +71,7 @@ usually breaks between the parts of a product and how to see each one.
 
 1. Run `.userflow/bin/collect-run.sh`. If it finds no session log (common
    for a subagent), note that in `decisions.md` and carry on.
-2. Tell the human, in this order: the verdict; the worst things a user will
+2. Tell the human, in this order, in plain words first (the report's "In plain words"): the verdict; the worst things a user will
    hit, in plain words; what you could not verify and why; where the report
    is; which files you added or changed. Do not soften it and do not pad
    it. Do not commit anything unless asked.

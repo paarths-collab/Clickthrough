@@ -57,12 +57,24 @@ def is_test_path(rel):
 MAX_BYTES = 1_500_000
 
 M = r"(get|post|put|patch|delete|options|head|all)"
+def flask_route(m):
+    """@app.route('/x', methods=['POST', 'GET']) -> one entry per method; @app.get('/x') -> GET."""
+    if m.group(1):
+        return f"{m.group(1).upper()} {m.group(2)}"
+    methods = re.search(r"methods\s*=\s*[\[(]([^\])]*)[\])]", m.string)
+    if methods:
+        names = [n.strip(" '\"").upper() for n in methods.group(1).split(",") if n.strip(" '\"")]
+        if names:
+            return f"{'|'.join(names)} {m.group(2)}"
+    return f"GET {m.group(2)}"  # Flask's default when methods is not given
+
+
 PATTERNS = [
     # ---- HTTP routes ----------------------------------------------------
     ("route", re.compile(r"\b(?:app|router|server|api|r|e|g|mux|fastify)\s*\.\s*" + M +
                          r"\s*\(\s*['\"`]([^'\"`]+)", re.I), lambda m: f"{m.group(1).upper()} {m.group(2)}"),
     ("route", re.compile(r"@(?:app|router|bp|blueprint|api|\w+_router)\s*\.\s*(?:route|" + M +
-                         r")\s*\(\s*['\"]([^'\"]+)", re.I), lambda m: f"{(m.group(1) or 'ANY').upper()} {m.group(2)}"),
+                         r")\s*\(\s*['\"]([^'\"]+)", re.I), flask_route),
     ("route", re.compile(r"@(Get|Post|Put|Patch|Delete|Request)Mapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?['\"]?([^'\")]*)"),
      lambda m: f"{m.group(1).upper().replace('REQUEST', 'ANY')} {m.group(2) or '/'}"),
     ("route", re.compile(r"@(Get|Post|Put|Patch|Delete|All)\s*\(\s*['\"]?([^'\")]*)"),

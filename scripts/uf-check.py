@@ -204,8 +204,10 @@ def main():
             if f.get("status") in ("blocked", "likely_broken"):
                 continue
             test_file = f.get("test_file")
+            if not test_file and f.get("status") in (None, "untested"):
+                continue  # work not done yet: counted in "tested X of Y", not an error
             if not test_file:
-                err(f"{f.get('id')}: no test_file")
+                err(f"{f.get('id')}: {f.get('status')} but no test_file")
             elif not os.path.exists(os.path.join(root, test_file)):
                 err(f"{f.get('id')}: test file does not exist: {test_file}")
 
@@ -235,8 +237,6 @@ def main():
                     err(f"{fid}: {status} needs a failure_class from {sorted(CLASSES)}")
                 if not f.get("finding"):
                     err(f"{fid}: {status} needs a one-line `finding`")
-            if status == "untested":
-                warn(f"{fid}: still untested")
 
     # ---- coverage against the code map ----------------------------------
     uncovered = []
@@ -297,6 +297,11 @@ def main():
                 print(f"  {priority}: {total} flows ({detail})")
     tested_statuses = {"pass", "fail", "likely_broken", "blocked"}
     untested = [f for f in flows if f.get("status") not in tested_statuses]
+    if stage >= 3 and untested:
+        by_priority = Counter(f.get("priority") for f in untested)
+        warn(f"{len(untested)} flows not tested yet ("
+             + ", ".join(f"{k} {v}" for k, v in sorted(by_priority.items(), key=lambda kv: str(kv[0])))
+             + "): the verdict cannot be READY; carry on with uf-parallel or write .userflow/next.md")
     if stage >= 1 and flows:
         done = len(flows) - len(untested)
         print(f"  Coverage: tested {done} of {len(flows)} flows"
