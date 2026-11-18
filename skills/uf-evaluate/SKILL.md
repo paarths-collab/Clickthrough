@@ -74,7 +74,10 @@ Follow `.userflow/guide.md`. Log each step in `decisions.md`.
      found: `blocked`, with `ENV_BLOCKED` or `TOOL_GAP` and
      `trace: "no break found in code"`. Every P0 flow you could not run
      gets traced; do P1 flows as time allows and say which you skipped.
-   - A goal works only if every route to it works.
+   - A goal works only if every route to it works. If one route was not run
+     (blocked, untested, only traced), never write that the goal works:
+     name the route and mark it unverified. Example: "invite works in the
+     app; the email-link route is unverified (no inbox)".
 9. **Write `report.md`** in the run folder from the template. Findings go
    worst first, each written so a builder can act on it without asking you
    anything: what the user did, what they expected, what they got, where it

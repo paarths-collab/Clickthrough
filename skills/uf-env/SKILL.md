@@ -35,17 +35,45 @@ commit it, and reuse it.
 | `accounts.md` | Each test account: role, tenant, how to sign in. |
 | `README.md` | What runs, how, every stand-in and what it does not cover, and what a run on a fresh machine needs installed. |
 
-Plus, when the product sends email or messages: a local mail catcher with
-a way for tests to read the inbox. When the product insists on https or a
-real domain (security policy, secure cookies): a local https front.
+Plus, when the product sends email or messages: a way for tests to read
+every message (a mail catcher for SMTP, the `uf-double` email preset for
+provider APIs). When the product insists on https or a real domain
+(security policy, secure cookies, production-only checks): a local https
+front with a throwaway self-signed certificate that the product and the
+test browser are told to trust (for Node, `NODE_EXTRA_CA_CERTS`; for the
+browser, the test tool's own setting). Keep the product's security
+settings on rather than bypassing them; if you must bypass one, list it.
+
+Pin what you download: write each tool's name, version and download URL
+in `userflow-tests/stack/versions.txt`, and ask for permission to
+download them by that list (tester kit item 9), so approvals and later
+runs are predictable.
 
 ## Steps
 
 1. **List what the product needs to run** from the README, config, env
    files, `uf-inventory.py` output (env vars, outbound calls, jobs) and
    the code that connects to each service.
-2. **For each part, choose:** run it for real locally, or a stand-in.
-   Write the choice and the reason in `decisions.md`.
+2. **For each part, choose, in this order,** and write the choice and the
+   reason in `decisions.md`:
+   1. **Run it for real locally**: databases, auth servers, file storage,
+      queues, realtime and search all usually have a local version. Try it
+      before calling a part missing.
+   2. **Use the staging target or a sandbox key** the human provided
+      (tester kit) for services that cannot run locally.
+   3. **A service double** (`.userflow/bin/uf-double.py`) at the network
+      edge: point the product's base URL for that service at it. Presets
+      cover email APIs (Resend, SendGrid, Postmark, Mailgun, SES), AI
+      models (OpenAI and Anthropic shapes, scripted replies and tool calls)
+      and webhook receivers; any other API gets routes in a config file.
+      Every request is recorded, so tests can read the email and click its
+      links, see the prompt and tool call, and check what a webhook carried.
+   A flow is `blocked` only when none of the three works. Results through
+   a double prove the product calls the service correctly, not that the
+   real service behaves the same; say so in the report.
+   **Email:** a product that sends through a provider's API never reaches
+   an SMTP mail catcher. Find how it sends (SDK, API URL, SMTP) and catch
+   it at that point.
 3. **Build `up`, `seed`, `reset`, `down`.** Apply the product's real
    migrations or schema; never hand-write a schema the repo already has.
 4. **Prove it from scratch:** `down`, then `up`, `seed`; every part

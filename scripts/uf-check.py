@@ -301,6 +301,17 @@ def main():
         done = len(flows) - len(untested)
         print(f"  Coverage: tested {done} of {len(flows)} flows"
               + (f"; {len(untested)} still to test" if untested else ""))
+    if stage >= 3 and flows:
+        by_goal = defaultdict(list)
+        for f in flows:
+            by_goal[f.get("goal")].append(f)
+        for goal, fl in sorted(by_goal.items(), key=lambda kv: str(kv[0])):
+            passed = [f for f in fl if f.get("status") == "pass"]
+            open_routes = [f for f in fl if f.get("status") in ("untested", "unverified", "blocked", "likely_broken", None)]
+            if passed and open_routes:
+                warn(f"goal {goal}: only partly verified - do not report it as working; "
+                     "routes not run: " + ", ".join(f"{f.get('id')} {f.get('route') or ''} [{f.get('status')}]"
+                                                   for f in open_routes[:6]))
     for line in warnings:
         print(f"WARN  {line}")
     for line in errors:
