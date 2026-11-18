@@ -70,6 +70,10 @@ For every step, check the `see`. Then, at the end, all four of these:
   and look. Do both when you can; they catch different bugs.
 - **It lasts**: reload the page and check the result is still there. Many
   bugs look fine until a refresh.
+- **Jobs and schedules**: snapshot the data the job should change, run the
+  job (trigger its endpoint or command), and compare. "It answered 200" is
+  not a pass; with no data check the flow is `unverified`. Also feed it one
+  bad record and check the next good record is still processed.
 - **Side effects**: the email, notification, job or call to another system
   listed in `side_effects`.
 

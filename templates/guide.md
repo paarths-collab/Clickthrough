@@ -73,7 +73,7 @@ to the result they can see and that is still there when they come back.
 | `.userflow/flows.yaml` | The registry: product, how to run it, personas, surfaces, goals, flows, status. Single source of truth. Committed. |
 | `.userflow/guide.md` | This file. |
 | `.userflow/tool-gaps.md` | Things you wanted to do and could not. Committed. |
-| `.userflow/bin/` | Helper scripts: `new-run.sh`, `collect-run.sh`, `uf-check.py`, `uf-inventory.py` (code dissection). |
+| `.userflow/bin/` | Helper scripts: `new-run.sh`, `collect-run.sh`, `uf-check.py`, `uf-inventory.py` (code dissection), `uf-double.py` (stand-in for outside services that records what the product sends). |
 | `.userflow/runs/<run-id>/` | One folder per run: `run.json`, `decisions.md`, `report.md`, `evidence/`, `raw/`. Never committed. |
 | `.userflow/inventory.json` | The code map from `uf-inventory.py`: every entry point; the registry must cover all of it. Committed. |
 | `.userflow/batches.md`, `.userflow/next.md` | Batch plan and "continue here" note for long audits (`uf-parallel`). Committed. |
