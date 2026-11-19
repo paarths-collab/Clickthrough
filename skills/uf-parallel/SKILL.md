@@ -55,17 +55,56 @@ one-line finding for failures, in YAML.
 Without parallel agents, run the batches one after another in this
 session.
 
-## 4. Merge and check
+## 4. Verify, then merge
 
-As each helper returns: copy its results into the registry, rerun every
-failure once alone in a clean tenant (flaky or real?), look at the
-evidence for a sample of passes, and mark the batch done in
-`batches.md`. Commit the registry and tests after each batch, so nothing
-is lost if the session ends.
+Every batch gets a **tester** and a separate **verifier** (another helper,
+or the lead). The verifier never trusts the tester's word:
+- reruns every failure alone in a clean tenant (flaky or real?);
+- reads each pass's test and evidence and checks that it really asserts
+  what the flow says (a test that only takes a screenshot, or checks a
+  success message, is not a pass);
+- reruns a sample of passes.
+
+**Proof for every bug.** When the verifier reproduces a failure, it
+records it, so a human can see the bug without rerunning anything:
+- screens: a video of the whole flow and a step trace (for Playwright,
+  `video: 'on'` and `trace: 'on'`; other tools have the same), showing the
+  user's steps and the wrong result;
+- APIs, CLIs, jobs, tools: a transcript of every request and response, or
+  command, output and exit code (a terminal recording when the tool is
+  interactive);
+- plus the data check that shows what was saved, sent or leaked.
+Save it in `.userflow/proof/<bug-id>/` (committed, so it outlives the
+session), name it after the flow (`F031.webm`, `F031-trace.zip`,
+`F031.txt`), keep each file small (short clip, low resolution; under
+about 5 MB), and mask passwords, tokens and personal data. Link it from
+the bug's `proof:` in the bug register. A bug found by running with no
+proof stays unconfirmed.
+
+Only verified results go into the registry; results the verifier changed
+are noted in `decisions.md`. Keep every test file path the tester wrote.
+Each failure goes into the bug register (`.userflow/bugs.yaml`): add it to
+an existing bug with the same cause, or open a new one.
+
+Then mark the batch done in `batches.md` and commit the registry, the bug
+register and the tests. Commit after every batch, small enough that a
+session ending without warning (time, context, or a usage limit) loses at
+most one batch.
+
+## Match the helpers to the machine
+
+More helpers than the machine can carry produce timeouts that look like
+bugs. Start with as many helpers as CPU cores minus one (at most 4 on a
+small machine), watch the load and the product's response times, and run
+fewer when timeouts appear. A failure that only happens under load is
+rerun alone before it counts.
 
 ## 5. Carry on until the list is done
 
 Keep starting batches until every flow is tested or blocked with a reason.
+There is no sampling and no budget cut-off: the goal is every bug. A
+smaller usage plan only means more sessions; the registry, the bug
+register and `next.md` carry the work from one session to the next.
 If this session cannot finish (time, context, cost), do not drop flows and
 do not end with "not covered" alone:
 - commit the registry, tests and `batches.md`;

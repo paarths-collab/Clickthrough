@@ -43,6 +43,13 @@ Is this project ready for real users? Use uf-run. auto
 For a large product, do it in two steps, so you see the whole map before
 any testing starts.
 
+On a small usage plan (or if you don't say), the agent does this by itself:
+it maps everything first, stops, and tells you how big the job is. Set
+`UF_PLAN` (`free`, `pro`, `max`, `team`, `enterprise` or `api`) in the
+session's environment to tell it your plan. Every bug it reports comes
+with proof in `.userflow/proof/`: a video and trace of the failing flow,
+or a request and response transcript.
+
 *Step 1, discover everything* (stops when the map is done):
 
 ```

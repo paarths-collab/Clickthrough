@@ -160,7 +160,7 @@ chmod +x "$uf/bin/new-run.sh" "$uf/bin/collect-run.sh" "$uf/bin/uf-check.py" "$u
 echo "userflow -> .userflow/ (guide, templates, bin)"
 touch_path .userflow
 
-for keep in flows.yaml tool-gaps.md; do
+for keep in flows.yaml tool-gaps.md bugs.yaml; do
   if [ -f "$uf/$keep" ]; then
     echo "kept     -> .userflow/$keep (already there)"
   else
