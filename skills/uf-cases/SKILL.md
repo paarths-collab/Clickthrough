@@ -83,7 +83,7 @@ lasts, side effects).
 
 A workflow is a journey across several components, often several people
 and some time: sign up → invite a teammate → they accept → they do the
-first task; or declare an incident → page → acknowledge → resolve → review.
+first task; or place an order → pay → ship → return → refund.
 Many breaks only show here: each screen works alone, and the handoff
 between them does not.
 

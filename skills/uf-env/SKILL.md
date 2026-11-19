@@ -16,7 +16,7 @@ commit it, and reuse it.
   production service (guide rule 9). No real secrets in committed files.
 - **Real parts where you can, stand-ins only where you must.** Run this
   product's own code and schema for real. A service that is not in the
-  repo (an identity hub, a payment provider, a third-party API) gets a
+  repo (a separate sign-in service, a payment provider, a third-party API) gets a
   stand-in at the network edge, built from what this product actually
   calls. List every stand-in: results through a stand-in are not proof the
   real service works.

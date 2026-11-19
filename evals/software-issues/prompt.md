@@ -4,23 +4,20 @@ runs: 2
 allowed_tools: [Read, Glob, Grep, Skill]
 ---
 
-Review this code from a web app for software issues. All user-facing flows using it currently "work" (no errors shown). Be brief: list the issues, how serious each is, and how you would prove each one.
+Review this code from an online shop for software issues. All user-facing flows using it currently "work" (no errors shown). Be brief: list the issues, how serious each is, and how you would prove each one.
 
-```ts
-// audit.ts
-export async function recordAction(db, actorTool: string, action: string) {
-  try {
-    await db.query("INSERT INTO audit_log (actor_id, action) VALUES ($1, $2)", [actorTool, action]);
-  } catch (e) {
-    console.debug("audit skipped");
-  }
-}
+```python
+# events.py
+def record_order_event(db, customer_email, event):
+    try:
+        db.execute("INSERT INTO order_events (customer_id, event) VALUES (%s, %s)", (customer_email, event))
+    except Exception:
+        log.debug("event not stored")
 
-// retention.ts  (runs once a day)
-const BATCH = 2000;
-export async function purgeOldAuditRows(db) {
-  await db.query("DELETE FROM audit_log WHERE id IN (SELECT id FROM audit_log WHERE created_at < now() - interval '400 days' LIMIT $1)", [BATCH]);
-}
+# cleanup.py  (runs once an hour)
+LIMIT = 500
+def delete_expired_carts(db):
+    db.execute("DELETE FROM carts WHERE id IN (SELECT id FROM carts WHERE updated_at < now() - interval '30 days' LIMIT %s)", (LIMIT,))
 
-// schema: audit_log.actor_id is uuid NOT NULL
+# schema: order_events.customer_id is integer NOT NULL; carts hold names, addresses and items
 ```
