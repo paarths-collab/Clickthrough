@@ -47,18 +47,41 @@ own rules and the intent call for. Standard sets:
 | Webhook in | valid and forged signature; duplicate delivery; result visible |
 | Email / notification | arrives; right person; right content; every link works for the recipient |
 
-Then every goal from the intent as a whole workflow (`uf-cases`, section 6)
-and every `uf-security` check that applies, as `abuse` flows.
+Then every `uf-security` check that applies, as `abuse` flows.
 
-## 3. Prioritise, do not cut
+## 3. Every workflow, mapped before any testing
+
+Single-screen flows miss the breaks between screens and people (an invite
+that arrives but does not sign the person in, a draft that is approved but
+never sent). So map every whole workflow now, not later:
+
+- For every goal (from the intent, the navigation and the code map: sign
+  up, invite and join, create and share, request and approve, pay, export,
+  delete, an agent drafting and a human approving, a job acting on data),
+  write its workflow card in `.userflow/cases/<goal-id>.md` as `uf-cases`
+  section 6 describes: the steps, who does each, what each step hands to
+  the next, every path from start to end, every branch, and the ways
+  people leave the path.
+- Every path becomes a flow in the registry (variant `normal` or
+  `alternate`), and every risky way of leaving the path becomes one
+  (`interrupted`, `not_allowed`, `abuse`), so each one gets tested.
+- Set the goal's `cases:` field to its card.
+- Depth: every P0 goal in full; every P1 goal with all paths and handoffs;
+  P2 goals with the main path.
+
+`uf-check.py --stage flows` fails while a P0 goal has no workflow card, so
+testing cannot start with workflows missing.
+
+## 4. Prioritise, do not cut
 
 Mark each flow P0, P1 or P2 (money, permissions, data loss, sign-in and
 the product's core job are P0). Priority decides the order of testing, not
 whether a flow is listed.
 
-## 4. Done when
+## 5. Done when
 
-- `uf-check.py --stage flows` reports no uncovered entry points;
+- `uf-check.py --stage flows` reports no uncovered entry points and no P0
+  goal without a workflow card;
 - every flow has a start and steps (short is fine; the test makes it
   exact);
 - the summary line shows the total, which is the "Y" in "tested X of Y".
