@@ -97,9 +97,16 @@ the P0 flows are done: P0 decides the order, not the scope. If the session
 cannot finish, follow `uf-parallel` section 5 (commit, `next.md`, tell the
 human to continue) instead of ending with "not covered".
 
-Keep `uf-patterns` (what breaks for users) and `uf-security` (what an
-attacker or a key can do) at hand through every phase. It is the list of what
-usually breaks between the parts of a product and how to see each one.
+Three kinds of bug, all in one bug register (`.userflow/bugs.yaml`):
+- **user flows** (`uf-patterns`, `uf-cases`): what a person hits;
+- **security** (`uf-security`): what another tenant, a lower role, a key
+  or an agent can do that they must not;
+- **software** (`uf-code`): what is wrong in the code even when no flow
+  shows it yet (swallowed errors, wrong writes, jobs that never catch up,
+  races, config drift, broken builds and tests).
+Start the `uf-code` and `uf-security` reading in parallel with listing
+(helpers per area; reading changes no data), and prove what they find
+during testing.
 
 ## Finishing
 

@@ -135,7 +135,8 @@ class CheckTest(unittest.TestCase):
         reg["flows"][0]["bug"] = "B001"
         code, out = self.run_check(reg, bugs=[])
         self.assertIn("bug B001 is not in", out)
-        bug = {"id": "B001", "title": "Home is broken", "severity": "high", "status": "open", "flows": ["F1"]}
+        bug = {"id": "B001", "title": "Home is broken", "severity": "high", "status": "open", "how_known": "ran",
+               "proof": ["README.md"], "flows": ["F1"]}
         code, out = self.run_check(reg, bugs=[bug])
         self.assertEqual(code, 0, out)
         self.assertIn("Bugs: 1 open (high 1)", out)
@@ -155,8 +156,21 @@ class CheckTest(unittest.TestCase):
         code, out = self.run_check(reg, bugs=[bug], files=("README.md", "t/F1.test.js", ".userflow/proof/B001/F1.png"))
         self.assertIn("no recording", out)
 
+    def test_read_or_traced_bug_needs_location_and_confidence(self):
+        bug = {"id": "B002", "title": "Audit insert error swallowed", "severity": "high", "status": "open",
+               "how_known": "read", "kind": "software"}
+        code, out = self.run_check(BASE, bugs=[bug])
+        self.assertIn("read needs `where`", out)
+        self.assertIn("needs confidence", out)
+        bug.update(where="src/audit.ts:94", confidence="high")
+        code, out = self.run_check(BASE, bugs=[bug])
+        self.assertEqual(code, 0, out)
+        bug["how_known"] = "guessed"
+        code, out = self.run_check(BASE, bugs=[bug])
+        self.assertIn("how_known must be ran, traced or read", out)
+
     def test_fixed_bug_needs_proof(self):
-        bug = {"id": "B001", "title": "x", "severity": "low", "status": "fixed", "flows": ["F1"]}
+        bug = {"id": "B001", "title": "x", "severity": "low", "status": "fixed", "how_known": "ran", "flows": ["F1"]}
         code, out = self.run_check(BASE, bugs=[bug])
         self.assertIn("fixed needs fixed_in", out)
 
