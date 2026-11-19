@@ -24,7 +24,11 @@ helpers breaking each other's data.
 ## 1. Plan the batches
 
 Group untested flows by area into batches small enough for one helper to
-finish (about 15 to 30 flows, P0 batches first). Write the plan to
+finish (about 15 to 30 flows, P0 batches first). Depth work is batch work
+too: add one batch per area for the `uf-cases` files of its P0 components
+and P0 workflows (understand, list every case and path, test them), and
+one batch for retrying `blocked` flows with service doubles or newly
+provided access. A run is not done while these batches are open. Write the plan to
 `.userflow/batches.md`: batch id, area, flow ids, status.
 
 ## 2. Give every helper its own data

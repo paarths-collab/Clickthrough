@@ -191,14 +191,15 @@ def main():
             path = s.get("cases")
             if not path:
                 shallow.append(sid)
-                warn(f"{sid} ({s.get('name')}): used by a P0 flow but has no `cases` file (uf-cases)")
             elif not os.path.exists(os.path.join(root, str(path))):
                 warn(f"{sid}: cases file does not exist: {path}")
         p0_goals = {f.get("goal") for f in flows if f.get("priority") == "P0"}
         for g in items("goals"):
             if g.get("id") in p0_goals and not g.get("cases"):
                 shallow.append(g.get("id"))
-                warn(f"goal {g.get('id')} ({g.get('title')}): P0 workflow has no `cases` file (uf-cases, section 6)")
+        if shallow:
+            listing = ", ".join(str(x) for x in shallow[:20]) + (" ..." if len(shallow) > 20 else "")
+            warn(f"{len(shallow)} P0 components or workflows have no `cases` file yet (uf-cases): {listing}")
     if stage >= 2:
         for f in flows:
             if f.get("status") in ("blocked", "likely_broken"):
