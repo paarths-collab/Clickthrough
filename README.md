@@ -45,8 +45,10 @@ any testing starts.
 
 On a small usage plan (or if you don't say), the agent does this by itself:
 it maps everything first, stops, and tells you how big the job is. Set
-`UF_PLAN` (`free`, `pro`, `max`, `team`, `enterprise` or `api`) in the
-session's environment to tell it your plan. Every bug it reports comes
+`UF_BUDGET` (`small`, `medium`, `large` or `metered`) in the session's
+environment to tell it your budget; the guide has a table mapping Claude,
+ChatGPT/Codex and Cursor plans and seats to these sizes. On `metered`
+(pay per use) it asks for a spending cap first. Every bug it reports comes
 with proof in `.userflow/proof/`: a video and trace of the failing flow,
 or a request and response transcript.
 

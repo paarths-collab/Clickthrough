@@ -117,6 +117,24 @@ folders, shared result folders. Clean up only what your own flow created,
 inside your own tenant. If something shared looks broken, recreate it
 deliberately and rerun everything that used it.
 
+## Usage budget
+
+Plan names differ between platforms and change often, so the setting is a
+size, `UF_BUDGET`: `small`, `medium`, `large` or `metered`. Go by the
+allowance of the plan or seat, not its name: Team and Enterprise depend
+on the seat type. This table was right when written; prices and names
+change, so when unsure, ask the human or look at the platform's own usage
+screen.
+
+| Budget | Claude (Claude Code) | ChatGPT (Codex) | Cursor |
+|---|---|---|---|
+| `small` | Free, Pro, Team Standard seat, Enterprise standard seat | Free, Go, Plus, Business, Enterprise/Edu without flexible pricing | Free, Plus, Premium |
+| `medium` | Max, Team Premium seat, Enterprise mid seat | Pro $100 | Super, lower Teams seats |
+| `large` | Ultra, Enterprise top seat | Pro $200 and $500 | Ultra, top Teams seats |
+| `metered` | API key, Enterprise usage-based | API key, Enterprise/Edu flexible credits | third-party models billed at API prices |
+
+Other platforms: pick the row whose allowance matches, or ask.
+
 ## Every finding is an evidence record
 
 Each finding, pass or fail, says:

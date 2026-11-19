@@ -61,15 +61,21 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
    accounts, an inbox, permissions (`UF_*` environment variables, the
    registry's `targets:`). What is missing is asked for in preflight
    (`uf-preflight` step 9), not guessed.
-   **Usage plan.** A full audit can use a lot of a usage plan, and you
-   cannot see the human's plan. Read `UF_PLAN` (`free`, `pro`, `max`,
-   `team`, `enterprise` or `api`). If it is not set, ask in review mode;
-   in auto mode, treat it as small. On a small or unknown plan (`free`,
-   `pro`, or unset), run in `discover` mode first even when asked for a
-   full audit: map everything, stop, and tell the human how many flows
-   and workflows there are, how many sessions testing may take, and how
-   to continue. Testing starts when they say so. The scope never shrinks:
-   every flow is still tested, over as many sessions as it takes.
+   **Usage budget.** A full audit can use a lot of a usage plan, and you
+   cannot see the human's plan. Read `UF_BUDGET` (`small`, `medium`,
+   `large` or `metered`). If it is not set, ask in review mode ("Which
+   plan are you on, and for Team or Enterprise, which seat?") and map the
+   answer with the table in `.userflow/guide.md` ("Usage budget"); in
+   auto mode, treat it as `small`.
+   - `small` or unknown: run in `discover` mode first even when asked for
+     a full audit: map everything, stop, and tell the human how many
+     flows and workflows there are, how many sessions testing may take,
+     and how to continue. Testing starts when they say so.
+   - `metered` (pay per use): ask for a spending cap before testing, and
+     stop at it.
+   - `medium` and `large`: carry on.
+   The scope never shrinks: every flow is still tested, over as many
+   sessions as it takes.
 5. **Read `.userflow/flows.yaml`.** If it already has content, continue from
    what is not done. Do not start again from nothing.
 
