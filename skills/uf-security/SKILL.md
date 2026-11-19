@@ -24,7 +24,7 @@ From `uf-inventory.py` output and the code, list every way in:
 | Each role | member, admin, owner, restricted, guest |
 | Another tenant | a user of a different workspace / org / account |
 | API key, per scope | read-only, write, admin-created, role-limited |
-| AI agent | MCP key, tool calls, anything that reads untrusted text then acts |
+| AI agent | its API or MCP key, tool calls, anything that reads untrusted text then acts |
 | Service / cron / internal | service secrets, job endpoints |
 
 For each endpoint, page, tool and job, write who should get in. That

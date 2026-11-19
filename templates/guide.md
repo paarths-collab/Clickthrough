@@ -90,7 +90,7 @@ Test each flow where it can be tested for real and safely:
 |---|---|---|
 | Code | finding where a flow breaks; flows nothing can run | read only |
 | Local copy (`uf-env`) | destructive, security and permission flows; resets | anything, test data only |
-| Staging / preview | flows that need real services: sign-in hub, email, files, messaging, AI, integrations | only the human's test accounts and tenants; create and delete only inside them; no resets; clean up |
+| Staging / preview | flows that need real services: sign-in, email, files, messaging, AI, integrations | only the human's test accounts and tenants; create and delete only inside them; no resets; clean up |
 | Production | read-only smoke: pages load, links work, logged-out API calls are refused | only if the human allowed it; nothing created, changed or deleted; slow request rate |
 
 Destructive and attack flows run on the local copy only, never on staging
