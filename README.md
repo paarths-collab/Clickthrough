@@ -40,6 +40,25 @@ It never deletes anything and is safe to run again.
 Is this project ready for real users? Use uf-run. auto
 ```
 
+For a large product, do it in two steps, so you see the whole map before
+any testing starts.
+
+*Step 1, discover everything* (stops when the map is done):
+
+```
+Discover every user flow and workflow in this project. Use uf-run discover. auto. Map every page, endpoint, tool and job, and write a workflow card for every goal. Do not test yet.
+
+You may build a local test copy of the product and download the tools it needs (database, auth server, browser), pinned by version. Run only against local or test data; never write to a remote or production database. Put what you need from me in the tester kit.
+```
+
+*Step 2, test everything* (new session; repeat until the report says every flow is tested):
+
+```
+Test the user-flow map. Use uf-run continue. auto. Audit only: do not change product code.
+
+You may build a local test copy of the product and download the tools it needs, pinned by version, and use service doubles for outside services. Run only against local or test data; never write to a remote or production database. Put what you need from me in the tester kit.
+```
+
 Prefer the Claude Code plugin? `/plugin install user-flow-qa --marketplace paarths-collab/user-flow-qa`
 
 ## What you get

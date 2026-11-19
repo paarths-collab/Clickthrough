@@ -193,13 +193,9 @@ def main():
                 shallow.append(sid)
             elif not os.path.exists(os.path.join(root, str(path))):
                 warn(f"{sid}: cases file does not exist: {path}")
-        p0_goals = {f.get("goal") for f in flows if f.get("priority") == "P0"}
-        for g in items("goals"):
-            if g.get("id") in p0_goals and not g.get("cases"):
-                shallow.append(g.get("id"))
         if shallow:
             listing = ", ".join(str(x) for x in shallow[:20]) + (" ..." if len(shallow) > 20 else "")
-            warn(f"{len(shallow)} P0 components or workflows have no `cases` file yet (uf-cases): {listing}")
+            warn(f"{len(shallow)} P0 components have no `cases` file yet (uf-cases): {listing}")
     if stage >= 2:
         for f in flows:
             if f.get("status") in ("blocked", "likely_broken"):
@@ -238,6 +234,20 @@ def main():
                     err(f"{fid}: {status} needs a failure_class from {sorted(CLASSES)}")
                 if not f.get("finding"):
                     err(f"{fid}: {status} needs a one-line `finding`")
+
+    # ---- workflows must be mapped before testing -------------------------
+    if stage >= 1 and flows:
+        p0_goal_ids = {f.get("goal") for f in flows if f.get("priority") == "P0"}
+        for g in items("goals"):
+            gid = g.get("id")
+            if gid not in p0_goal_ids:
+                continue
+            card = g.get("cases")
+            if not card:
+                err(f"goal {gid} ({g.get('title')}): P0 workflow has no workflow card; map it "
+                    "(uf-catalog section 3) before testing")
+            elif not os.path.exists(os.path.join(root, str(card))):
+                err(f"goal {gid}: workflow card does not exist: {card}")
 
     # ---- coverage against the code map ----------------------------------
     uncovered = []
@@ -342,8 +352,8 @@ def main():
                 verdict = (f"CANNOT TELL (every P0 flow passed, but tested only "
                            f"{len(flows) - len(untested)} of {len(flows)} flows)")
             elif not open_areas and shallow:
-                verdict = ("CANNOT TELL (every P0 flow written passed, but these P0 components or "
-                           "workflows were not tested in depth with uf-cases: "
+                verdict = ("CANNOT TELL (every P0 flow written passed, but these P0 components "
+                           "were not tested in depth with uf-cases: "
                            + ", ".join(str(x) for x in shallow[:10])
                            + (" ..." if len(shallow) > 10 else "") + ")")
             elif open_areas:

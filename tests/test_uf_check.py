@@ -114,6 +114,16 @@ class CheckTest(unittest.TestCase):
         self.assertIn("not tested in depth", self.verdict(out))
         self.assertEqual(out.count("no `cases` file"), 1, "missing cases files are summarised in one warning")
 
+    def test_p0_goal_without_workflow_card_blocks_listing(self):
+        reg = copy.deepcopy(BASE)
+        del reg["goals"][0]["cases"]
+        code, out = self.run_check(reg, stage="flows")
+        self.assertEqual(code, 1)
+        self.assertIn("P0 workflow has no workflow card", out)
+        reg["goals"][0]["cases"] = "missing.md"
+        code, out = self.run_check(reg, stage="flows")
+        self.assertIn("workflow card does not exist", out)
+
     def test_uncovered_entry_points_are_listed_and_covers_fixes_it(self):
         inventory = [{"kind": "route", "what": "GET /api/v1/items", "where": "src/api.ts:3", "test": False},
                      {"kind": "page", "what": "/home", "where": "src/app/home/page.tsx:1", "test": False}]

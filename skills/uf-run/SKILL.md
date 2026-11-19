@@ -32,8 +32,15 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
      `uf-run recheck` before anyone calls it ready.
    - `update`: the product changed since the registry was written. Run
      `uf-discover` in update mode, then carry on from there.
-   - `continue`: an earlier session left `.userflow/next.md`. Read it and
-     `batches.md`, then, before the next batches:
+   - `discover`: the request says "discover", "map" or "list first". Run
+     phases 1 to 3 (preflight, discover, catalog with every workflow
+     card), commit the registry, the code map and the cards, and stop.
+     Report: entry points, surfaces, workflows, flows by priority, and
+     the tester kit. The human looks at the full list; a later session
+     tests it with `continue`.
+   - `continue`: an earlier session left `.userflow/next.md` (or ran in
+     `discover` mode). Read it and `batches.md`, then, before the next
+     batches:
      1. **Retry what was blocked.** The skills and tools may be newer than
         the run that wrote the registry. Re-read `uf-env` and
         `uf-preflight` step 9, and for every `blocked` flow try again with
