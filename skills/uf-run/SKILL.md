@@ -35,6 +35,8 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
    - `discover`: the request says "discover", "map" or "list first". Run
      phases 1 to 3 (preflight, discover, catalog with every workflow
      card), commit the registry, the code map and the cards, and stop.
+     Do not start testing in this mode, not even a few flows: the human
+     decides when testing starts.
      Report: entry points, surfaces, workflows, flows by priority, and
      the tester kit. The human looks at the full list; a later session
      tests it with `continue`.

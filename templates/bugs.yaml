@@ -1,0 +1,24 @@
+# Bug register: every bug found, once, across all runs.
+#
+# A bug is one cause. If one cause breaks ten flows, it is one bug with ten
+# flows. Every flow with status `fail` or `likely_broken` in flows.yaml
+# names its bug (`bug: B001`). Keep bugs here when they are fixed: mark
+# them `fixed` with the commit and the run that proved it, so the list is
+# the full history. Check with:
+#   python3 .userflow/bin/uf-check.py --stage evaluate
+version: 1
+bugs: []
+#  - id: B001
+#    title: "Invite link lands the invitee on the public page, signed out"   # what a user or attacker experiences
+#    severity: high        # critical | high | medium | low
+#    kind: flow            # flow | security | privacy | integration | software | missing
+#    how_known: ran        # ran | traced (followed through code, not run)
+#    status: open          # open | fixed | wont_fix | duplicate
+#    flows: [F031, F058]   # every flow this bug breaks
+#    where: "src/features/workspace/handlers/workspace.handler.ts:358"      # file and line, when known
+#    cause: "invite link carries the session in the URL fragment; the client ignores it"
+#    evidence: [".userflow/runs/<run-id>/evidence/F031/failure.png"]
+#    found_in: {run: "<run-id>", commit: "<sha>"}
+#    verified_by: "<verifier batch or rerun>"   # a second, independent run that reproduced it
+#    fixed_in: null        # {commit: "<sha>", run: "<run-id>"} once a recheck proves it fixed
+#    duplicate_of: null

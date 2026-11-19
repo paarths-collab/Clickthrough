@@ -44,6 +44,14 @@ One row per goal, one line per route. A goal works only if every route works.
 Totals: P0 <pass>/<total>, P1 <pass>/<total>, P2 <pass>/<total>,
 unverified <n>, blocked <n>.
 
+## All bugs
+
+From `.userflow/bugs.yaml`: every bug found so far, once each, worst first.
+
+| Bug | What happens | Severity | Kind | How known | Flows | Status |
+|---|---|---|---|---|---|---|
+| | | | | | | |
+
 ## Findings
 
 Worst first. Each one is written so the builder can act on it.

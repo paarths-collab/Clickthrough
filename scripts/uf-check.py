@@ -235,6 +235,46 @@ def main():
                 if not f.get("finding"):
                     err(f"{fid}: {status} needs a one-line `finding`")
 
+    # ---- priority discipline --------------------------------------------
+    if stage >= 1 and len(flows) >= 20:
+        p0_share = sum(1 for f in flows if f.get("priority") == "P0") / len(flows)
+        if p0_share > 0.30:
+            warn(f"{p0_share:.0%} of flows are P0: P0 is for the core job, sign-in, money, other tenants' "
+                 "data, permissions and data loss; re-rank (uf-catalog section 4) so the worst bugs are found first")
+
+    # ---- bug register -----------------------------------------------------
+    bugs_path = os.path.join(root, ".userflow", "bugs.yaml")
+    bug_list = []
+    if stage >= 3:
+        failing = [f for f in flows if f.get("status") in ("fail", "likely_broken")]
+        if os.path.exists(bugs_path):
+            try:
+                bug_list = (yaml.safe_load(open(bugs_path, encoding="utf-8")) or {}).get("bugs") or []
+            except yaml.YAMLError as exc:
+                err(f".userflow/bugs.yaml is not valid YAML: {exc}")
+            bug_ids = {b.get("id") for b in bug_list if isinstance(b, dict)}
+            for b in bug_list:
+                if not isinstance(b, dict):
+                    continue
+                if b.get("severity") not in ("critical", "high", "medium", "low"):
+                    err(f"bug {b.get('id')}: severity must be critical, high, medium or low")
+                if b.get("status") not in ("open", "fixed", "wont_fix", "duplicate"):
+                    err(f"bug {b.get('id')}: status must be open, fixed, wont_fix or duplicate")
+                if not b.get("title"):
+                    err(f"bug {b.get('id')}: needs a title (what a user or attacker experiences)")
+                if b.get("status") == "fixed" and not b.get("fixed_in"):
+                    err(f"bug {b.get('id')}: fixed needs fixed_in (commit and the run that proved it)")
+                for fid in b.get("flows") or []:
+                    if fid not in flow_ids:
+                        err(f"bug {b.get('id')}: flow {fid} is not in flows.yaml")
+            for f in failing:
+                if not f.get("bug"):
+                    err(f"{f.get('id')}: {f.get('status')} but names no bug; add it to .userflow/bugs.yaml")
+                elif f.get("bug") not in bug_ids:
+                    err(f"{f.get('id')}: bug {f.get('bug')} is not in .userflow/bugs.yaml")
+        elif failing:
+            warn(f"{len(failing)} failing flows but no .userflow/bugs.yaml: list every bug once there")
+
     # ---- workflows must be mapped before testing -------------------------
     if stage >= 1 and flows:
         p0_goal_ids = {f.get("goal") for f in flows if f.get("priority") == "P0"}
@@ -328,6 +368,13 @@ def main():
                 warn(f"goal {goal}: only partly verified - do not report it as working; "
                      "routes not run: " + ", ".join(f"{f.get('id')} {f.get('route') or ''} [{f.get('status')}]"
                                                    for f in open_routes[:6]))
+    if bug_list:
+        open_bugs = [b for b in bug_list if isinstance(b, dict) and b.get("status") == "open"]
+        sev = Counter(b.get("severity") for b in open_bugs)
+        order = ["critical", "high", "medium", "low"]
+        print(f"  Bugs: {len(open_bugs)} open ("
+              + ", ".join(f"{k} {sev[k]}" for k in order if sev[k]) + f"), "
+              + f"{sum(1 for b in bug_list if isinstance(b, dict) and b.get('status') == 'fixed')} fixed")
     for line in warnings:
         print(f"WARN  {line}")
     for line in errors:

@@ -78,6 +78,12 @@ Follow `.userflow/guide.md`. Log each step in `decisions.md`.
      (blocked, untested, only traced), never write that the goal works:
      name the route and mark it unverified. Example: "invite works in the
      app; the email-link route is unverified (no inbox)".
+8b. **Update the bug register** (`.userflow/bugs.yaml`): one entry per
+   cause, with every flow it breaks, severity, where it breaks, evidence,
+   how it is known (`ran` or `traced`) and who verified it. Every `fail`
+   and `likely_broken` flow names its bug (`bug: B007`). In recheck mode,
+   mark bugs `fixed` with the commit and run that proved it; never delete
+   a bug.
 9. **Write `report.md`** in the run folder from the template. Findings go
    worst first, each written so a builder can act on it without asking you
    anything: what the user did, what they expected, what they got, where it

@@ -29,7 +29,7 @@ BASE = {
 
 
 class CheckTest(unittest.TestCase):
-    def run_check(self, registry, stage="evaluate", inventory=None, files=("README.md", "t/F1.test.js")):
+    def run_check(self, registry, stage="evaluate", inventory=None, files=("README.md", "t/F1.test.js"), bugs=None):
         with tempfile.TemporaryDirectory() as tmp:
             os.makedirs(os.path.join(tmp, ".userflow"))
             for rel in files:
@@ -38,6 +38,9 @@ class CheckTest(unittest.TestCase):
                 open(path, "w").close()
             with open(os.path.join(tmp, ".userflow", "flows.yaml"), "w") as handle:
                 yaml.safe_dump(registry, handle)
+            if bugs is not None:
+                with open(os.path.join(tmp, ".userflow", "bugs.yaml"), "w") as handle:
+                    yaml.safe_dump({"version": 1, "bugs": bugs}, handle)
             if inventory is not None:
                 with open(os.path.join(tmp, ".userflow", "inventory.json"), "w") as handle:
                     json.dump({"items": inventory}, handle)
@@ -123,6 +126,37 @@ class CheckTest(unittest.TestCase):
         reg["goals"][0]["cases"] = "missing.md"
         code, out = self.run_check(reg, stage="flows")
         self.assertIn("workflow card does not exist", out)
+
+    def test_failing_flow_must_name_a_registered_bug(self):
+        reg = copy.deepcopy(BASE)
+        reg["flows"][0].update(status="fail", failure_class="FLOW_BROKEN", finding="broken")
+        code, out = self.run_check(reg, bugs=[])
+        self.assertIn("names no bug", out)
+        reg["flows"][0]["bug"] = "B001"
+        code, out = self.run_check(reg, bugs=[])
+        self.assertIn("bug B001 is not in", out)
+        bug = {"id": "B001", "title": "Home is broken", "severity": "high", "status": "open", "flows": ["F1"]}
+        code, out = self.run_check(reg, bugs=[bug])
+        self.assertEqual(code, 0, out)
+        self.assertIn("Bugs: 1 open (high 1)", out)
+        self.assertEqual(self.verdict(out), "NOT READY")
+
+    def test_fixed_bug_needs_proof(self):
+        bug = {"id": "B001", "title": "x", "severity": "low", "status": "fixed", "flows": ["F1"]}
+        code, out = self.run_check(BASE, bugs=[bug])
+        self.assertIn("fixed needs fixed_in", out)
+
+    def test_p0_inflation_warning(self):
+        reg = copy.deepcopy(BASE)
+        template = reg["flows"][0]
+        reg["flows"] = []
+        for n in range(20):
+            f = copy.deepcopy(template)
+            f["id"] = f"F{n + 1}"
+            f["priority"] = "P0" if n < 10 else "P1"
+            reg["flows"].append(f)
+        code, out = self.run_check(reg, stage="flows")
+        self.assertIn("50% of flows are P0", out)
 
     def test_uncovered_entry_points_are_listed_and_covers_fixes_it(self):
         inventory = [{"kind": "route", "what": "GET /api/v1/items", "where": "src/api.ts:3", "test": False},

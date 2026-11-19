@@ -75,6 +75,7 @@ to the result they can see and that is still there when they come back.
 | `.userflow/tool-gaps.md` | Things you wanted to do and could not. Committed. |
 | `.userflow/bin/` | Helper scripts: `new-run.sh`, `collect-run.sh`, `uf-check.py`, `uf-inventory.py` (code dissection), `uf-double.py` (stand-in for outside services that records what the product sends). |
 | `.userflow/runs/<run-id>/` | One folder per run: `run.json`, `decisions.md`, `report.md`, `evidence/`, `raw/`. Never committed. |
+| `.userflow/bugs.yaml` | The bug register: every bug found, once, across all runs, with the flows it breaks and its status. Committed. |
 | `.userflow/inventory.json` | The code map from `uf-inventory.py`: every entry point; the registry must cover all of it. Committed. |
 | `.userflow/batches.md`, `.userflow/next.md` | Batch plan and "continue here" note for long audits (`uf-parallel`). Committed. |
 | `.userflow/cases/<surface-id>.md` | Component card and every case for one component (`uf-cases`). Committed. |

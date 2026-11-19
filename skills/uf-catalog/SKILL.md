@@ -74,9 +74,16 @@ testing cannot start with workflows missing.
 
 ## 4. Prioritise, do not cut
 
-Mark each flow P0, P1 or P2 (money, permissions, data loss, sign-in and
-the product's core job are P0). Priority decides the order of testing, not
-whether a flow is listed.
+Mark each flow P0, P1 or P2. Priority decides the order of testing, so
+the worst bugs are found first; it never decides whether a flow is listed
+or tested. Every flow gets tested in the end.
+
+P0 is narrow: the main path of the product's core job, signing in and
+out, money moving, another tenant's data, permissions and human-only
+decisions, and data loss or erasure. Variants of a P0 goal (wrong input,
+empty, interrupted) are P1 unless they themselves leak data, lose data or
+bypass a permission. As a rule of thumb P0 is under a quarter of all
+flows; `uf-check.py` warns above 30%, and that warning means re-rank.
 
 ## 5. Done when
 
