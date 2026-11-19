@@ -267,6 +267,13 @@ def main():
                 for fid in b.get("flows") or []:
                     if fid not in flow_ids:
                         err(f"bug {b.get('id')}: flow {fid} is not in flows.yaml")
+                if b.get("how_known") not in ("ran", "traced", "read"):
+                    err(f"bug {b.get('id')}: how_known must be ran, traced or read")
+                elif b.get("how_known") in ("traced", "read") and b.get("status") == "open":
+                    if not b.get("where"):
+                        err(f"bug {b.get('id')}: {b.get('how_known')} needs `where` (file and line)")
+                    if b.get("confidence") not in ("high", "medium", "low"):
+                        err(f"bug {b.get('id')}: {b.get('how_known')} needs confidence: high, medium or low")
                 if b.get("how_known") == "ran" and b.get("status") in ("open", "fixed"):
                     proof = [str(x) for x in (b.get("proof") or [])]
                     present = [x for x in proof if os.path.exists(os.path.join(root, x))]

@@ -64,6 +64,32 @@ Worst first. Each one is written so the builder can act on it.
 - Breaks at: <step and layer, and the cause if you found it>
 - Evidence: <paths>
 
+## Software checklist (uf-code)
+
+Every check, with how it was done. "Not done" needs a reason.
+
+| # | Check | Result | How known (ran / traced / read / not done) | Bugs |
+|---|---|---|---|---|
+| 0 | Project's own build, typecheck, lint, tests, dependency audit | | | |
+| 1 | Errors caught and ignored | | | |
+| 2 | Partial failure without rollback | | | |
+| 3 | Retries and timeouts | | | |
+| 4 | Writes to the wrong field, table or type | | | |
+| 5 | Code disagrees with schema | | | |
+| 6 | Missing constraints, orphans, soft-delete leaks | | | |
+| 7 | Time handling | | | |
+| 8 | Numbers, money, paging ranges | | | |
+| 9 | Jobs that never catch up | | | |
+| 10 | Jobs not safe to run twice | | | |
+| 11 | Unbounded queries, N+1 | | | |
+| 12 | Races and lost updates | | | |
+| 13 | Settings with silent defaults or overrides | | | |
+| 14 | Values that differ between components | | | |
+| 15 | Health checks and logs | | | |
+| 16 | Dead code, not-implemented paths, debug output | | | |
+| 17 | Duplicated logic that drifted | | | |
+| 18 | Build and dependency health | | | |
+
 ## Security checklist (uf-security)
 
 Every check, with how it was done. "Not done" needs a reason.

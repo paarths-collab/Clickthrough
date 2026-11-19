@@ -78,6 +78,7 @@ Prefer the Claude Code plugin? `/plugin install user-flow-qa --marketplace paart
 | A check before the agent says "done" | `uf-ready-check` |
 | Every case of one feature or workflow | `uf-cases` |
 | What other users, roles, keys or agents can reach | `uf-security` |
+| Software issues in the code (swallowed errors, wrong writes, jobs that never catch up, races, config drift) | `uf-code` |
 | Fixes, each proven by a real run | `uf-fix` |
 | A throwaway test copy of your app | `uf-env` |
 

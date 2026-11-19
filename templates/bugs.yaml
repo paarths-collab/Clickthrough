@@ -12,7 +12,8 @@ bugs: []
 #    title: "Invite link lands the invitee on the public page, signed out"   # what a user or attacker experiences
 #    severity: high        # critical | high | medium | low
 #    kind: flow            # flow | security | privacy | integration | software | missing
-#    how_known: ran        # ran | traced (followed through code, not run)
+#    how_known: ran        # ran (reproduced; needs proof) | traced (followed through code) | read (spotted in code)
+#    confidence: null      # traced or read only: high | medium | low
 #    status: open          # open | fixed | wont_fix | duplicate
 #    flows: [F031, F058]   # every flow this bug breaks
 #    where: "src/invites/accept.ts:42"      # file and line, when known
