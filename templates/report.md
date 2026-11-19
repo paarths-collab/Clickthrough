@@ -48,9 +48,9 @@ unverified <n>, blocked <n>.
 
 From `.userflow/bugs.yaml`: every bug found so far, once each, worst first.
 
-| Bug | What happens | Severity | Kind | How known | Flows | Status |
-|---|---|---|---|---|---|---|
-| | | | | | | |
+| Bug | What happens | Severity | Kind | How known | Flows | Proof | Status |
+|---|---|---|---|---|---|---|---|
+| | | | | | | | |
 
 ## Findings
 

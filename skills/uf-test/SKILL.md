@@ -111,7 +111,9 @@ Have each test save a screenshot of the final state, and of the page at the
 moment of failure, to the folder in the `UF_EVIDENCE_DIR` environment
 variable when it is set: `<UF_EVIDENCE_DIR>/<flow-id>/final.png` and
 `failure.png`. Print the values it observed, so the output alone shows what
-happened.
+happened. When `UF_RECORD=1` is set (the verifier sets it), also record a
+video and a step trace for screen flows, or a full request and response
+transcript for API, CLI and job flows, into the same folder.
 
 ## Order of work
 

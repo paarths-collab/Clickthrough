@@ -141,6 +141,20 @@ class CheckTest(unittest.TestCase):
         self.assertIn("Bugs: 1 open (high 1)", out)
         self.assertEqual(self.verdict(out), "NOT READY")
 
+    def test_bug_found_by_running_needs_proof_recording(self):
+        reg = copy.deepcopy(BASE)
+        reg["flows"][0].update(status="fail", failure_class="FLOW_BROKEN", finding="broken", bug="B001")
+        bug = {"id": "B001", "title": "Home is broken", "severity": "high", "status": "open",
+               "how_known": "ran", "flows": ["F1"]}
+        code, out = self.run_check(reg, bugs=[bug])
+        self.assertIn("has no proof file", out)
+        bug["proof"] = [".userflow/proof/B001/F1.webm"]
+        code, out = self.run_check(reg, bugs=[bug], files=("README.md", "t/F1.test.js", ".userflow/proof/B001/F1.webm"))
+        self.assertEqual(code, 0, out)
+        bug["proof"] = [".userflow/proof/B001/F1.png"]
+        code, out = self.run_check(reg, bugs=[bug], files=("README.md", "t/F1.test.js", ".userflow/proof/B001/F1.png"))
+        self.assertIn("no recording", out)
+
     def test_fixed_bug_needs_proof(self):
         bug = {"id": "B001", "title": "x", "severity": "low", "status": "fixed", "flows": ["F1"]}
         code, out = self.run_check(BASE, bugs=[bug])

@@ -65,6 +65,22 @@ or the lead). The verifier never trusts the tester's word:
   success message, is not a pass);
 - reruns a sample of passes.
 
+**Proof for every bug.** When the verifier reproduces a failure, it
+records it, so a human can see the bug without rerunning anything:
+- screens: a video of the whole flow and a step trace (for Playwright,
+  `video: 'on'` and `trace: 'on'`; other tools have the same), showing the
+  user's steps and the wrong result;
+- APIs, CLIs, jobs, tools: a transcript of every request and response, or
+  command, output and exit code (a terminal recording when the tool is
+  interactive);
+- plus the data check that shows what was saved, sent or leaked.
+Save it in `.userflow/proof/<bug-id>/` (committed, so it outlives the
+session), name it after the flow (`F031.webm`, `F031-trace.zip`,
+`F031.txt`), keep each file small (short clip, low resolution; under
+about 5 MB), and mask passwords, tokens and personal data. Link it from
+the bug's `proof:` in the bug register. A bug found by running with no
+proof stays unconfirmed.
+
 Only verified results go into the registry; results the verifier changed
 are noted in `decisions.md`. Keep every test file path the tester wrote.
 Each failure goes into the bug register (`.userflow/bugs.yaml`): add it to

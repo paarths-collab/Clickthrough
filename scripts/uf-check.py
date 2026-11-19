@@ -267,6 +267,19 @@ def main():
                 for fid in b.get("flows") or []:
                     if fid not in flow_ids:
                         err(f"bug {b.get('id')}: flow {fid} is not in flows.yaml")
+                if b.get("how_known") == "ran" and b.get("status") in ("open", "fixed"):
+                    proof = [str(x) for x in (b.get("proof") or [])]
+                    present = [x for x in proof if os.path.exists(os.path.join(root, x))]
+                    if not present:
+                        err(f"bug {b.get('id')}: found by running but has no proof file; the verifier records "
+                            "a video and trace (screens) or a transcript (API, CLI) in .userflow/proof/")
+                    elif len(present) < len(proof):
+                        err(f"bug {b.get('id')}: proof file missing: "
+                            + ", ".join(x for x in proof if x not in present))
+                    recording = (".webm", ".mp4", ".mov", ".gif", ".cast", ".zip", ".txt", ".har", ".log", ".json")
+                    if present and not any(x.lower().endswith(recording) for x in present):
+                        warn(f"bug {b.get('id')}: proof has no recording (video, trace or transcript), "
+                             "only images")
             for f in failing:
                 if not f.get("bug"):
                     err(f"{f.get('id')}: {f.get('status')} but names no bug; add it to .userflow/bugs.yaml")

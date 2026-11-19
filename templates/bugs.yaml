@@ -15,8 +15,9 @@ bugs: []
 #    how_known: ran        # ran | traced (followed through code, not run)
 #    status: open          # open | fixed | wont_fix | duplicate
 #    flows: [F031, F058]   # every flow this bug breaks
-#    where: "src/features/workspace/handlers/workspace.handler.ts:358"      # file and line, when known
-#    cause: "invite link carries the session in the URL fragment; the client ignores it"
+#    where: "src/invites/accept.ts:42"      # file and line, when known
+#    cause: "the invite link carries the session where the sign-in page never reads it"
+#    proof: [".userflow/proof/B001/F031.webm", ".userflow/proof/B001/F031-trace.zip"]   # the verifier's recording: video and trace for screens, request/response or command transcript otherwise
 #    evidence: [".userflow/runs/<run-id>/evidence/F031/failure.png"]
 #    found_in: {run: "<run-id>", commit: "<sha>"}
 #    verified_by: "<verifier batch or rerun>"   # a second, independent run that reproduced it
