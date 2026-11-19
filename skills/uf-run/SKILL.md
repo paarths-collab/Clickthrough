@@ -33,7 +33,17 @@ Read `.userflow/guide.md` now. Its rules apply to everything below.
    - `update`: the product changed since the registry was written. Run
      `uf-discover` in update mode, then carry on from there.
    - `continue`: an earlier session left `.userflow/next.md`. Read it and
-     `batches.md`, and carry on testing the next batches (`uf-parallel`).
+     `batches.md`, then, before the next batches:
+     1. **Retry what was blocked.** The skills and tools may be newer than
+        the run that wrote the registry. Re-read `uf-env` and
+        `uf-preflight` step 9, and for every `blocked` flow try again with
+        what is available now: a local version of the service, the staging
+        target or sandbox keys the human has since provided, or a service
+        double (`uf-double.py`). Keep a flow `blocked` only after all three
+        fail, and write why in its finding.
+     2. **Do the depth work that is missing** (`uf-cases` files for P0
+        components and workflows); it is part of the batches, not optional.
+     3. Then carry on testing the next batches (`uf-parallel`).
    If `.userflow/bin/new-run.sh` does not exist, the project is not set
    up yet: load `uf-setup` and follow it first.
 3. **Start the run:** `.userflow/bin/new-run.sh --harness <claude|codex|cursor|other> --model <your model id> --mode <mode> --independent <yes|no>`.

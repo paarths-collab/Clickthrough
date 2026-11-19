@@ -107,6 +107,14 @@ with what is possible and put the kit at the top of the report and in
 `.userflow/next.md`. Secrets go into environment variables, never into the
 chat. Never ask for production write access or real people's mailboxes.
 
+## Shared test state
+
+During a run, never delete or overwrite what other tests or helpers depend
+on: signed-in session files, seeded accounts, the test stack's data
+folders, shared result folders. Clean up only what your own flow created,
+inside your own tenant. If something shared looks broken, recreate it
+deliberately and rerun everything that used it.
+
 ## Every finding is an evidence record
 
 Each finding, pass or fail, says:
