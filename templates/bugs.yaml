@@ -5,7 +5,7 @@
 # names its bug (`bug: B001`). Keep bugs here when they are fixed: mark
 # them `fixed` with the commit and the run that proved it, so the list is
 # the full history. Check with:
-#   python3 .userflow/bin/uf-check.py --stage evaluate
+#   python3 .clickthrough/bin/ct-check.py --stage evaluate
 version: 1
 bugs: []
 #  - id: B001
@@ -18,8 +18,8 @@ bugs: []
 #    flows: [F031, F058]   # every flow this bug breaks
 #    where: "src/invites/accept.ts:42"      # file and line, when known
 #    cause: "the invite link carries the session where the sign-in page never reads it"
-#    proof: [".userflow/proof/B001/F031.webm", ".userflow/proof/B001/F031-trace.zip"]   # the verifier's recording: video and trace for screens, request/response or command transcript otherwise
-#    evidence: [".userflow/runs/<run-id>/evidence/F031/failure.png"]
+#    proof: [".clickthrough/proof/B001/F031.webm", ".clickthrough/proof/B001/F031-trace.zip"]   # the verifier's recording: video and trace for screens, request/response or command transcript otherwise
+#    evidence: [".clickthrough/runs/<run-id>/evidence/F031/failure.png"]
 #    found_in: {run: "<run-id>", commit: "<sha>"}
 #    verified_by: "<verifier batch or rerun>"   # a second, independent run that reproduced it
 #    fixed_in: null        # {commit: "<sha>", run: "<run-id>"} once a recheck proves it fixed

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start a run folder: .userflow/runs/<run-id>/ with run.json and decisions.md.
+# Start a run folder: .clickthrough/runs/<run-id>/ with run.json and decisions.md.
 # Prints the folder path. Usage:
 #   new-run.sh [--harness claude|codex|other] [--model ID]
 #              [--mode review|auto|recheck|update] [--condition skills|baseline]
@@ -49,7 +49,7 @@ if git -C "$project" rev-parse HEAD >/dev/null 2>&1; then
 fi
 
 run_id="$(date -u +%Y%m%dT%H%M%SZ)-${commit:0:7}"
-run_dir="$project/.userflow/runs/$run_id"
+run_dir="$project/.clickthrough/runs/$run_id"
 mkdir -p "$run_dir/evidence" "$run_dir/raw"
 
 cat > "$run_dir/run.json" <<JSON
@@ -71,7 +71,7 @@ JSON
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 template=""
-for candidate in "$project/.userflow/templates/decisions.md" "$here/../templates/decisions.md"; do
+for candidate in "$project/.clickthrough/templates/decisions.md" "$here/../templates/decisions.md"; do
   if [ -f "$candidate" ]; then template="$candidate"; break; fi
 done
 if [ -n "$template" ]; then
@@ -80,5 +80,5 @@ else
   echo "# Decision log" > "$run_dir/decisions.md"
 fi
 
-echo "$run_id" > "$project/.userflow/runs/CURRENT"
+echo "$run_id" > "$project/.clickthrough/runs/CURRENT"
 echo "$run_dir"

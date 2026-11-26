@@ -1,5 +1,6 @@
-.userflow/runs/
+.clickthrough/runs/
 node_modules/
 *.db
 *.db-journal
 evals/results/
+.userflow/runs/

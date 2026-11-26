@@ -1,6 +1,6 @@
-# User-flow QA: shared rules
+# Clickthrough: shared rules
 
-Every `uf-*` skill follows this file. Read it once at the start of a session.
+Every `ct-*` skill follows this file. Read it once at the start of a session.
 
 ## The stance
 
@@ -22,7 +22,7 @@ to the result they can see and that is still there when they come back.
    client for an MCP server, the command line for a CLI, the installed
    package for a library, the app's UI for a desktop or mobile app, the
    device or an emulator for firmware. These skills use web words (page,
-   click, menu, refresh); `uf-patterns` has a table that translates them
+   click, menu, refresh); `ct-patterns` has a table that translates them
    for any kind of product. Choose your own tools for that door.
 2. **No mocks of this product.** Never replace our own frontend, backend,
    database or MCP server with a fake. A third-party service (payments,
@@ -52,7 +52,7 @@ to the result they can see and that is still there when they come back.
 7. **Do not change the product.** In these skills you report. You do not
    edit application code, migrations or config to make a flow pass. Adding
    a test tool the project lacks (for example Playwright as a dev
-   dependency, with its config inside `userflow-tests/`) is not a product
+   dependency, with its config inside `clickthrough-tests/`) is not a product
    change; list what you added in the report.
 8. **If the product cannot start, do not imagine results.** Report the
    blocker and exactly what a tester would need to run it, then switch to
@@ -70,17 +70,17 @@ to the result they can see and that is still there when they come back.
 
 | Path | What it is |
 |---|---|
-| `.userflow/flows.yaml` | The registry: product, how to run it, personas, surfaces, goals, flows, status. Single source of truth. Committed. |
-| `.userflow/guide.md` | This file. |
-| `.userflow/tool-gaps.md` | Things you wanted to do and could not. Committed. |
-| `.userflow/bin/` | Helper scripts: `new-run.sh`, `collect-run.sh`, `uf-check.py`, `uf-inventory.py` (code dissection), `uf-double.py` (stand-in for outside services that records what the product sends). |
-| `.userflow/runs/<run-id>/` | One folder per run: `run.json`, `decisions.md`, `report.md`, `evidence/`, `raw/`. Never committed. |
-| `.userflow/bugs.yaml` | The bug register: every bug found, once, across all runs, with the flows it breaks and its status. Committed. |
-| `.userflow/proof/<bug-id>/` | Proof for each bug: the verifier's video and trace, or request/response transcript. Small files, secrets masked. Committed. |
-| `.userflow/inventory.json` | The code map from `uf-inventory.py`: every entry point; the registry must cover all of it. Committed. |
-| `.userflow/batches.md`, `.userflow/next.md` | Batch plan and "continue here" note for long audits (`uf-parallel`). Committed. |
-| `.userflow/cases/<surface-id>.md` | Component card and every case for one component (`uf-cases`). Committed. |
-| `userflow-tests/` | One test file per flow, plus `<surface-id>.cases.*` table tests. Committed. |
+| `.clickthrough/flows.yaml` | The registry: product, how to run it, personas, surfaces, goals, flows, status. Single source of truth. Committed. |
+| `.clickthrough/guide.md` | This file. |
+| `.clickthrough/tool-gaps.md` | Things you wanted to do and could not. Committed. |
+| `.clickthrough/bin/` | Helper scripts: `new-run.sh`, `collect-run.sh`, `ct-check.py`, `ct-inventory.py` (code dissection), `ct-double.py` (stand-in for outside services that records what the product sends). |
+| `.clickthrough/runs/<run-id>/` | One folder per run: `run.json`, `decisions.md`, `report.md`, `evidence/`, `raw/`. Never committed. |
+| `.clickthrough/bugs.yaml` | The bug register: every bug found, once, across all runs, with the flows it breaks and its status. Committed. |
+| `.clickthrough/proof/<bug-id>/` | Proof for each bug: the verifier's video and trace, or request/response transcript. Small files, secrets masked. Committed. |
+| `.clickthrough/inventory.json` | The code map from `ct-inventory.py`: every entry point; the registry must cover all of it. Committed. |
+| `.clickthrough/batches.md`, `.clickthrough/next.md` | Batch plan and "continue here" note for long audits (`ct-parallel`). Committed. |
+| `.clickthrough/cases/<surface-id>.md` | Component card and every case for one component (`ct-cases`). Committed. |
+| `clickthrough-tests/` | One test file per flow, plus `<surface-id>.cases.*` table tests. Committed. |
 
 ## Targets: code, local copy, staging, production
 
@@ -89,7 +89,7 @@ Test each flow where it can be tested for real and safely:
 | Target | Use it for | Rule |
 |---|---|---|
 | Code | finding where a flow breaks; flows nothing can run | read only |
-| Local copy (`uf-env`) | destructive, security and permission flows; resets | anything, test data only |
+| Local copy (`ct-env`) | destructive, security and permission flows; resets | anything, test data only |
 | Staging / preview | flows that need real services: sign-in, email, files, messaging, AI, integrations | only the human's test accounts and tenants; create and delete only inside them; no resets; clean up |
 | Production | read-only smoke: pages load, links work, logged-out API calls are refused | only if the human allowed it; nothing created, changed or deleted; slow request rate |
 
@@ -102,11 +102,11 @@ can run on none of them.
 
 When something the audit needs is missing (a staging URL, a test inbox,
 test accounts, sandbox services, a schema that is not in the repo,
-permission to download tools), fill `.userflow/templates/tester-kit.md`
+permission to download tools), fill `.clickthrough/templates/tester-kit.md`
 with only the items that apply and say which flows each unlocks. In review
 mode, ask before testing the flows that need it. In auto mode, carry on
 with what is possible and put the kit at the top of the report and in
-`.userflow/next.md`. Secrets go into environment variables, never into the
+`.clickthrough/next.md`. Secrets go into environment variables, never into the
 chat. Never ask for production write access or real people's mailboxes.
 
 ## Shared test state
@@ -120,7 +120,7 @@ deliberately and rerun everything that used it.
 ## Usage budget
 
 Plan names differ between platforms and change often, so the setting is a
-size, `UF_BUDGET`: `small`, `medium`, `large` or `metered`. Go by the
+size, `CT_BUDGET`: `small`, `medium`, `large` or `metered`. Go by the
 allowance of the plan or seat, not its name: Team and Enterprise depend
 on the seat type. This table was right when written; prices and names
 change, so when unsure, ask the human or look at the platform's own usage
@@ -152,7 +152,7 @@ Never upgrade the "how known" in a summary: a traced finding stays traced.
 Recording is part of the job, not paperwork. These records are studied later
 to work out which steps a cheaper model can follow.
 
-1. At the start of a session run `.userflow/bin/new-run.sh` once. It creates
+1. At the start of a session run `.clickthrough/bin/new-run.sh` once. It creates
    the run folder and prints its path. Pass what you know:
    `--harness claude|codex|cursor|other --model <id> --mode review|auto`.
    Use that one folder for the whole session.
@@ -175,10 +175,10 @@ to work out which steps a cheaper model can follow.
    down.
 3. Every time you want to do something and cannot (no browser tool, no
    database access, cannot receive the email, no test account), add an entry
-   to `.userflow/tool-gaps.md`. Then mark whatever depended on it
+   to `.clickthrough/tool-gaps.md`. Then mark whatever depended on it
    `unverified` or `blocked`. A gap is useful information, not a failure of
    yours.
-4. At the end run `.userflow/bin/collect-run.sh`. It copies the harness's
+4. At the end run `.clickthrough/bin/collect-run.sh`. It copies the harness's
    own session log into `raw/`.
 
 ## Statuses
@@ -201,7 +201,7 @@ run, one hop at a time:
 user action → request → handler → saved data → whoever reads it next → what the user sees
 ```
 
-At each hop, check the patterns in `uf-patterns` that apply: names that
+At each hop, check the patterns in `ct-patterns` that apply: names that
 differ across a boundary, a route nobody calls or that does not exist, an
 error swallowed, a check on write but not on read, a side effect on one
 route only, a setting nothing reads, a session or token handed over in a
@@ -232,7 +232,7 @@ route the server does not have)".
 
 ## Evidence
 
-Evidence lives in `.userflow/runs/<run-id>/evidence/<flow-id>/`. Good
+Evidence lives in `.clickthrough/runs/<run-id>/evidence/<flow-id>/`. Good
 evidence for one flow is: the test's output, a screenshot of the final state
 (`final.png`) and of the failure, if any (`failure.png`), any failed network
 calls or console errors, and the result of checking what was saved.
@@ -240,10 +240,10 @@ calls or console errors, and the result of checking what was saved.
 Later passes get their own folders so nothing is overwritten:
 `evidence/rerun/<flow-id>/` for the solo rerun of a failure and
 `evidence/walk/<flow-id>/` for the hand walk. In the registry, write
-evidence paths relative to the project root; `uf-check.py` checks that they
+evidence paths relative to the project root; `ct-check.py` checks that they
 exist.
 
-The registry, `tool-gaps.md` and `userflow-tests/` are meant to be
+The registry, `tool-gaps.md` and `clickthrough-tests/` are meant to be
 committed, but committing is the human's call. Leave them in the working
 tree and list what you added or changed.
 
