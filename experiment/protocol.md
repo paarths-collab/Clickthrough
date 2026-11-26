@@ -75,12 +75,12 @@ Same project, same commit, same model, fresh session every time.
    > everything that is broken. auto
 
    The skill pack starts its own run folder. If the agent does not pick up
-   `uf-run` by itself, that is a result too: record it in the notes column,
-   then rerun with "Use uf-run" added and score that run separately.
+   `ct-run` by itself, that is a result too: record it in the notes column,
+   then rerun with "Use ct-run" added and score that run separately.
 3. When it finishes:
 
    ```bash
-   .userflow/bin/collect-run.sh
+   .clickthrough/bin/collect-run.sh
    ```
 
 Run each condition 2 or 3 times. One run is noise.
@@ -123,7 +123,7 @@ with evidence, and `wrong_ready` is no. If recall does not move, read
 `decisions.md` and the raw log for the treatment runs to see where the
 agent left the procedure: that is what to fix in the skills.
 
-Then read `.userflow/tool-gaps.md` from the treatment runs. Every entry is
+Then read `.clickthrough/tool-gaps.md` from the treatment runs. Every entry is
 a place the agent was stuck for lack of a tool. The entries that repeat
 across runs are the tools worth building.
 

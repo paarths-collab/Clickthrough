@@ -34,14 +34,14 @@ project="$(cd "$project" && pwd)"
 
 run_dir=""
 if [ -z "$out" ]; then
-  if [ -z "$run" ] && [ -f "$project/.userflow/runs/CURRENT" ]; then
-    run="$(cat "$project/.userflow/runs/CURRENT")"
+  if [ -z "$run" ] && [ -f "$project/.clickthrough/runs/CURRENT" ]; then
+    run="$(cat "$project/.clickthrough/runs/CURRENT")"
   fi
   if [ -z "$run" ]; then
     echo "No run found. Start one with new-run.sh, or pass --run or --out." >&2
     exit 1
   fi
-  run_dir="$project/.userflow/runs/$run"
+  run_dir="$project/.clickthrough/runs/$run"
   if [ ! -d "$run_dir" ]; then
     echo "Run folder not found: $run_dir" >&2
     exit 1

@@ -1,7 +1,7 @@
 # User-flow tests on every pull request.
 #
-# Copy to .github/workflows/userflow.yml once userflow-tests/stack/ exists
-# (see the uf-env skill), then adjust the "Set up the toolchain" step for
+# Copy to .github/workflows/clickthrough.yml once clickthrough-tests/stack/ exists
+# (see the ct-env skill), then adjust the "Set up the toolchain" step for
 # this project's language. It starts the disposable test stack, runs every
 # flow test, and keeps the evidence as a build artifact.
 name: user flows
@@ -29,27 +29,27 @@ jobs:
         run: echo "Add the project's install command here (npm ci, pip install -r ..., cargo build)"
 
       - name: Start the test stack
-        run: bash userflow-tests/stack/up && bash userflow-tests/stack/seed
+        run: bash clickthrough-tests/stack/up && bash clickthrough-tests/stack/seed
 
       - name: Run the flow tests
         env:
-          UF_EVIDENCE_DIR: ${{ github.workspace }}/userflow-evidence
+          CT_EVIDENCE_DIR: ${{ github.workspace }}/clickthrough-evidence
         run: |
-          # The command recorded in .userflow/flows.yaml under run.test_command.
-          python3 - <<'PY' > /tmp/uf-test-command
+          # The command recorded in .clickthrough/flows.yaml under run.test_command.
+          python3 - <<'PY' > /tmp/ct-test-command
           import yaml
-          print(yaml.safe_load(open(".userflow/flows.yaml"))["run"]["test_command"])
+          print(yaml.safe_load(open(".clickthrough/flows.yaml"))["run"]["test_command"])
           PY
-          bash -c "$(cat /tmp/uf-test-command)"
+          bash -c "$(cat /tmp/ct-test-command)"
 
       - name: Stop the test stack
         if: always()
-        run: bash userflow-tests/stack/down || true
+        run: bash clickthrough-tests/stack/down || true
 
       - name: Keep the evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: userflow-evidence
-          path: userflow-evidence
+          name: clickthrough-evidence
+          path: clickthrough-evidence
           if-no-files-found: ignore

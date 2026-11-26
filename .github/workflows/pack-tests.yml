@@ -48,10 +48,10 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Installer installs every skill and script
         run: |
-          mkdir -p /tmp/uf-target && cd /tmp/uf-target && git init -q
-          bash "$GITHUB_WORKSPACE/install.sh" both /tmp/uf-target
-          bash "$GITHUB_WORKSPACE/install.sh" both /tmp/uf-target
-          test "$(ls /tmp/uf-target/.claude/skills | wc -l)" -eq "$(ls "$GITHUB_WORKSPACE/skills" | wc -l)"
-          test -x /tmp/uf-target/.userflow/bin/uf-double.py
-          test -x /tmp/uf-target/.userflow/bin/uf-inventory.py
-          grep -q "user-flow-qa:start" /tmp/uf-target/CLAUDE.md
+          mkdir -p /tmp/ct-target && cd /tmp/ct-target && git init -q
+          bash "$GITHUB_WORKSPACE/install.sh" both /tmp/ct-target
+          bash "$GITHUB_WORKSPACE/install.sh" both /tmp/ct-target
+          test "$(ls /tmp/ct-target/.claude/skills | wc -l)" -eq "$(ls "$GITHUB_WORKSPACE/skills" | wc -l)"
+          test -x /tmp/ct-target/.clickthrough/bin/ct-double.py
+          test -x /tmp/ct-target/.clickthrough/bin/ct-inventory.py
+          grep -q "clickthrough:start" /tmp/ct-target/CLAUDE.md

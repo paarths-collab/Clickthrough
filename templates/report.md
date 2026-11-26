@@ -46,7 +46,7 @@ unverified <n>, blocked <n>.
 
 ## All bugs
 
-From `.userflow/bugs.yaml`: every bug found so far, once each, worst first.
+From `.clickthrough/bugs.yaml`: every bug found so far, once each, worst first.
 
 | Bug | What happens | Severity | Kind | How known | Flows | Proof | Status |
 |---|---|---|---|---|---|---|---|
@@ -64,7 +64,7 @@ Worst first. Each one is written so the builder can act on it.
 - Breaks at: <step and layer, and the cause if you found it>
 - Evidence: <paths>
 
-## Software checklist (uf-code)
+## Software checklist (ct-code)
 
 Every check, with how it was done. "Not done" needs a reason.
 
@@ -90,7 +90,7 @@ Every check, with how it was done. "Not done" needs a reason.
 | 17 | Duplicated logic that drifted | | | |
 | 18 | Build and dependency health | | | |
 
-## Security checklist (uf-security)
+## Security checklist (ct-security)
 
 Every check, with how it was done. "Not done" needs a reason.
 
@@ -154,7 +154,7 @@ Worst first. Not confirmed: each needs one real run.
 
 ## What a tester needs to run this for real
 
-<The filled tester kit (`.userflow/templates/tester-kit.md`): only the
+<The filled tester kit (`.clickthrough/templates/tester-kit.md`): only the
 items this product needs, each with the flows it unlocks. Exactly enough
 for the next run to test the blocked flows.>
 

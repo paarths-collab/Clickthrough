@@ -1,6 +1,6 @@
 # User-flow registry. Single source of truth for what a user can do with this
 # product and whether it has been shown to work. Check it with:
-#   python3 .userflow/bin/uf-check.py --stage discover|flows|test|evaluate
+#   python3 .clickthrough/bin/ct-check.py --stage discover|flows|test|evaluate
 # (no --stage runs every check). Paths in this file are relative to the
 # project root.
 version: 1
@@ -10,7 +10,7 @@ product:
   purpose: ""            # one paragraph: what the product is for, in plain words
   intent_sources: []     # where the intent came from: PRD path, README, "described by <person>"
 
-# How to run the real product. Filled in by uf-preflight.
+# How to run the real product. Filled in by ct-preflight.
 run:
   install: ""
   boot: ""               # one command that starts the whole stack
@@ -18,15 +18,15 @@ run:
   reset: ""              # puts data back to a known state between flows
   stop: ""               # a command, or in words: "stop the process started by boot"
   base_url: ""
-  test_command: ""       # runs every file in userflow-tests/
+  test_command: ""       # runs every file in clickthrough-tests/
   services: []           # - {name: api, check: "GET /health", logs: "path or command"}
   stubs: []              # third-party services stubbed at the network edge, if any
 
 # Where flows can run. Only add staging and production when the human named them.
 targets: []
-#  - {name: local, url: "http://localhost:3000", data: writable-test, how: "userflow-tests/stack/up"}
-#  - {name: staging, url: "$UF_STAGING_URL", data: writable-test, tenants: ["Test A", "Test B"],
-#     accounts: {owner: UF_OWNER_EMAIL, member: UF_MEMBER_EMAIL}, inbox: UF_INBOX_API_KEY,
+#  - {name: local, url: "http://localhost:3000", data: writable-test, how: "clickthrough-tests/stack/up"}
+#  - {name: staging, url: "$CT_STAGING_URL", data: writable-test, tenants: ["Test A", "Test B"],
+#     accounts: {owner: CT_OWNER_EMAIL, member: CT_MEMBER_EMAIL}, inbox: CT_INBOX_API_KEY,
 #     confirmed_by: "human, in chat, <date>"}
 #  - {name: production, url: "https://...", data: read-only, confirmed_by: "human, in chat, <date>"}
 
@@ -55,8 +55,8 @@ surfaces: []
 #    excluded: ""         # only if no flow should cover this surface: the reason (e.g. "health check, not for users")
 #    covers: []           # code-map entries this surface stands for: paths, globs, tool names, files
 #                         # e.g. ["/projects", "GET /api/v1/projects*", "src/app/(main)/projects/*"]
-#    cases: null          # path to .userflow/cases/<id>.md once uf-cases has covered it (expected for surfaces in P0 flows)
-#  goals can carry the same field for the whole-workflow cases: cases: .userflow/cases/G01.md
+#    cases: null          # path to .clickthrough/cases/<id>.md once ct-cases has covered it (expected for surfaces in P0 flows)
+#  goals can carry the same field for the whole-workflow cases: cases: .clickthrough/cases/G01.md
 #    note: ""
 
 # What a user comes here to get done. One goal can have several routes.
@@ -79,7 +79,7 @@ flows: []
 #      - {do: "Click Projects in the sidebar", see: "List of my projects"}
 #    persisted: ["tasks row with this title under this project"]
 #    side_effects: []
-#    test_file: "userflow-tests/F001-add-task-project-page.test.js"   # null if the flow is blocked
+#    test_file: "clickthrough-tests/F001-add-task-project-page.test.js"   # null if the flow is blocked
 #    target: local        # where this flow should run: code | local | staging | production
 #    status: untested     # untested | pass | fail | unverified | blocked | likely_broken
 #    confidence: null     # likely_broken only: high | medium | low (traced in code, not run)
