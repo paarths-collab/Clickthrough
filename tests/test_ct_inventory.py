@@ -9,6 +9,7 @@ import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT = os.path.join(ROOT, "scripts", "ct-inventory.py")
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
 spec = importlib.util.spec_from_file_location("ct_inventory", SCRIPT)
 inventory = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(inventory)
@@ -85,6 +86,35 @@ class TestFrameworks(unittest.TestCase):
             self.assertTrue(any(i["kind"] == "job" for i in items))
             self.assertTrue(any(i["kind"] == "email" for i in items))
             self.assertNotIn(("route", "GET /should-not-count"), what)
+
+
+class TestDiscoveryGaps(unittest.TestCase):
+    def test_previously_missed_entry_points(self):
+        fixtures = {'src/pages/index.astro': '<h1>Home</h1>',
+                    'src/routes/+page.svelte': '<h1>Home</h1>',
+                    'src/pages/api/orders.ts': 'export default function handler(req, res) {}',
+                    'server/api.py': '@app.post(\n    "/orders"\n)\ndef orders(): pass\n',
+                    'crontab': '* * * * * /app/report\n'}
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, text in fixtures.items():
+                path = os.path.join(tmp, name)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, 'w') as stream:
+                    stream.write(text)
+            items = run(tmp)
+            for name in fixtures:
+                self.assertTrue(any(i['where'].split(':')[0] == name for i in items), name)
+
+    def test_runtime_schema_and_limits_are_recorded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, 'api.json'), 'w') as stream:
+                json.dump({'paths': {'/mounted/orders': {'post': {}}}}, stream)
+            out = subprocess.run([sys.executable, SCRIPT, tmp, '--json', '--runtime', os.path.join(tmp, 'api.json')], capture_output=True, text=True, check=True)
+            data = json.loads(out.stdout)
+            self.assertTrue(any(i['what'] == 'POST /mounted/orders' and i['source'] == 'runtime' for i in data['items']))
+            self.assertTrue(data['diagnostics'])
+            self.assertIn('product_sha256', data)
+            self.assertNotIn('root', data)
 
 
 if __name__ == "__main__":

@@ -4,3 +4,8 @@ node_modules/
 *.db-journal
 evals/results/
 .userflow/runs/
+
+.clickthrough/proof/
+.clickthrough-backups/
+.ct-install.lock
+__pycache__/

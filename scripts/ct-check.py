@@ -19,6 +19,8 @@ Exit code 1 if there are errors. Warnings do not fail the check. Needs PyYAML
 and log a tool gap.
 """
 import argparse
+import builtins
+from ct_core import CATEGORIES, identity, evidence_errors, local_file
 import fnmatch
 import json
 import os
@@ -49,18 +51,59 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--stage", choices=STAGES, default="evaluate")
     parser.add_argument("--file", default=".clickthrough/flows.yaml")
+    parser.add_argument("--json", action="store_true", help="emit machine-readable validation and verdict")
+    parser.add_argument("--require-ready", action="store_true", help="exit 2 unless the release verdict is READY")
     args = parser.parse_args()
+    if args.require_ready and args.stage != "evaluate":
+        parser.error("--require-ready requires --stage evaluate")
+    def print(*values):
+        if not args.json:
+            builtins.print(*values)
     stage = STAGES.index(args.stage)
     root = os.path.dirname(os.path.dirname(os.path.abspath(args.file)))
 
     try:
         with open(args.file, encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
-    except (OSError, yaml.YAMLError) as err:
-        sys.exit(f"ERROR cannot read {args.file}: {err}")
+    except (OSError, yaml.YAMLError) as exc:
+        message = f"cannot read {args.file}: {exc}"
+        builtins.print(json.dumps({"verdict": "CANNOT TELL", "errors": [message]}) if args.json else "ERROR " + message)
+        sys.exit(1)
 
+    if not isinstance(data, dict):
+        message = "registry must be a YAML object"
+        builtins.print(json.dumps({"verdict": "CANNOT TELL", "errors": [message]}) if args.json else "ERROR " + message)
+        sys.exit(1)
     errors, warnings = [], []
     err, warn = errors.append, warnings.append
+
+    # Reject malformed nested shapes before semantic validation; never silently drop entries.
+    for key in ("product", "run"):
+        if key in data and not isinstance(data[key], dict):
+            err(f"{key} must be an object")
+    for key in ("personas", "areas", "surfaces", "goals", "flows"):
+        values = data.get(key, [])
+        if not isinstance(values, list) or any(not isinstance(v, dict) for v in values):
+            err(f"{key} must be a list of objects")
+            continue
+        for value in values:
+            if not isinstance(value.get("id"), str):
+                err(f"{key}: each id must be a string")
+            for field in ("surfaces", "personas", "covers", "evidence"):
+                if field in value and (not isinstance(value[field], list) or any(not isinstance(x, str) for x in value[field])):
+                    err(f"{key}: {field} must be a list of strings")
+            for field in ("goal", "persona", "priority", "variant", "status", "type", "source", "leads_to", "bug", "area", "test_file", "cases"):
+                if field in value and value[field] is not None and not isinstance(value[field], str):
+                    err(f"{key}: {field} must be a string")
+            if "steps" in value and not isinstance(value["steps"], list):
+                err(f"{key}: steps must be a list")
+            if value.get("last_run") is not None:
+                last = value["last_run"]
+                if not isinstance(last, dict) or not isinstance(last.get("evidence", []), list) or any(not isinstance(x, str) for x in last.get("evidence", [])):
+                    err(f"{key}: last_run must be an object with an evidence list")
+    if errors:
+        builtins.print(json.dumps({"verdict": "CANNOT TELL", "errors": errors}) if args.json else "\n".join("ERROR " + e for e in errors))
+        sys.exit(1)
 
     def items(key):
         value = data.get(key) or []
@@ -192,6 +235,7 @@ def main():
             if not path:
                 shallow.append(sid)
             elif not os.path.exists(os.path.join(root, str(path))):
+                shallow.append(sid)
                 warn(f"{sid}: cases file does not exist: {path}")
         if shallow:
             listing = ", ".join(str(x) for x in shallow[:20]) + (" ..." if len(shallow) > 20 else "")
@@ -201,8 +245,8 @@ def main():
             if f.get("status") in ("blocked", "likely_broken"):
                 continue
             test_file = f.get("test_file")
-            if not test_file and f.get("status") in (None, "untested"):
-                continue  # work not done yet: counted in "tested X of Y", not an error
+            if not test_file and f.get("status") == "untested" and stage == 3:
+                continue  # partial audits may be reported but cannot pass the release gate
             if not test_file:
                 err(f"{f.get('id')}: {f.get('status')} but no test_file")
             elif not os.path.exists(os.path.join(root, test_file)):
@@ -210,8 +254,11 @@ def main():
 
     # ---- results ----------------------------------------------------------
     if stage >= 3:
+        current = identity(root)
         for f in flows:
             fid, status = f.get("id"), f.get("status")
+            if status in ("pass", "fail"):
+                errors.extend(evidence_errors(root, f, current))
             last = f.get("last_run") or {}
             evidence = last.get("evidence") or []
             if isinstance(evidence, str):
@@ -250,9 +297,23 @@ def main():
         if os.path.exists(bugs_path):
             try:
                 bug_list = (yaml.safe_load(open(bugs_path, encoding="utf-8")) or {}).get("bugs") or []
-            except yaml.YAMLError as exc:
+                if not isinstance(bug_list, list) or any(not isinstance(b, dict) for b in bug_list):
+                    raise ValueError("bugs must be a list of objects")
+            except (yaml.YAMLError, ValueError, AttributeError, OSError) as exc:
+                bug_list = []
                 err(f".clickthrough/bugs.yaml is not valid YAML: {exc}")
-            bug_ids = {b.get("id") for b in bug_list if isinstance(b, dict)}
+            bug_ids = set()
+            for b in bug_list:
+                if not isinstance(b.get("flows", []), list) or any(not isinstance(f, str) for f in b.get("flows", [])):
+                    err("bug flows must be a list of ids")
+                    b["flows"] = []
+                if not isinstance(b.get("proof", []), list) or any(not isinstance(f, str) for f in b.get("proof", [])):
+                    err("bug proof must be a list of relative paths")
+                    b["proof"] = []
+                if not isinstance(b.get("id"), str) or b["id"] in bug_ids:
+                    err("bug ids must be unique strings")
+                else:
+                    bug_ids.add(b["id"])
             for b in bug_list:
                 if not isinstance(b, dict):
                     continue
@@ -262,8 +323,12 @@ def main():
                     err(f"bug {b.get('id')}: status must be open, fixed, wont_fix or duplicate")
                 if not b.get("title"):
                     err(f"bug {b.get('id')}: needs a title (what a user or attacker experiences)")
-                if b.get("status") == "fixed" and not b.get("fixed_in"):
-                    err(f"bug {b.get('id')}: fixed needs fixed_in (commit and the run that proved it)")
+                if b.get("status") == "fixed":
+                    fixed = b.get("fixed_in")
+                    if not isinstance(fixed, dict) or not fixed.get("commit") or not fixed.get("run"):
+                        err(f"bug {b.get('id')}: fixed needs fixed_in (commit and the run that proved it)")
+                if b.get("status") == "duplicate" and (b.get("duplicate_of") not in bug_ids or b.get("duplicate_of") == b.get("id")):
+                    err(f"bug {b.get('id')}: duplicate needs a different registered duplicate_of")
                 for fid in b.get("flows") or []:
                     if fid not in flow_ids:
                         err(f"bug {b.get('id')}: flow {fid} is not in flows.yaml")
@@ -276,7 +341,13 @@ def main():
                         err(f"bug {b.get('id')}: {b.get('how_known')} needs confidence: high, medium or low")
                 if b.get("how_known") == "ran" and b.get("status") in ("open", "fixed"):
                     proof = [str(x) for x in (b.get("proof") or [])]
-                    present = [x for x in proof if os.path.exists(os.path.join(root, x))]
+                    present = []
+                    for x in proof:
+                        try:
+                            local_file(root, x)
+                            present.append(x)
+                        except ValueError:
+                            pass
                     if not present:
                         err(f"bug {b.get('id')}: found by running but has no proof file; the verifier records "
                             "a video and trace (screens) or a transcript (API, CLI) in .clickthrough/proof/")
@@ -292,8 +363,12 @@ def main():
                     err(f"{f.get('id')}: {f.get('status')} but names no bug; add it to .clickthrough/bugs.yaml")
                 elif f.get("bug") not in bug_ids:
                     err(f"{f.get('id')}: bug {f.get('bug')} is not in .clickthrough/bugs.yaml")
+                else:
+                    bug = next(b for b in bug_list if b.get("id") == f["bug"])
+                    if bug.get("status") not in ("open", "wont_fix") or f["id"] not in bug.get("flows", []):
+                        err(f"{f['id']}: failing flow must reference an unresolved bug that lists this flow")
         elif failing:
-            warn(f"{len(failing)} failing flows but no .clickthrough/bugs.yaml: list every bug once there")
+            err(f"{len(failing)} failing flows but no .clickthrough/bugs.yaml: list every bug once there")
 
     # ---- workflows must be mapped before testing -------------------------
     if stage >= 1 and flows:
@@ -314,14 +389,26 @@ def main():
     inv_path = os.path.join(root, ".clickthrough", "inventory.json")
     if stage >= 1 and os.path.exists(inv_path):
         try:
-            inventory = json.load(open(inv_path, encoding="utf-8")).get("items", [])
-        except (ValueError, OSError) as exc:
+            inventory_doc = json.load(open(inv_path, encoding="utf-8"))
+            inventory = inventory_doc["items"]
+            if not isinstance(inventory, list) or any(not isinstance(i, dict) for i in inventory):
+                raise ValueError("items must be a list of objects")
+            if stage >= 3:
+                if inventory_doc.get("product_sha256") != current["product_sha256"]:
+                    err("inventory is stale or has no product fingerprint; regenerate it")
+                review = data.get("inventory_review") or {}
+                if not isinstance(review, dict) or review.get("product_sha256") != current["product_sha256"] or not review.get("reviewer") or not review.get("notes"):
+                    err("inventory needs an independent reconciliation: inventory_review reviewer, notes and current product_sha256")
+        except (ValueError, OSError, KeyError, TypeError, AttributeError) as exc:
             inventory = []
-            warn(f".clickthrough/inventory.json could not be read: {exc}")
+            err(f".clickthrough/inventory.json could not be read: {exc}")
         patterns = []
         for s in surfaces:
             for value in [s.get("location")] + list(s.get("covers") or []):
                 if value:
+                    if str(value).strip() in ("*", "**", "/*", "**/*"):
+                        err(f"{s.get('id')}: blanket covers pattern is not coverage: {value}")
+                        continue
                     patterns.append(str(value).strip().rstrip("/") or "/")
 
         def covered(item):
@@ -347,8 +434,83 @@ def main():
                 f"Add surfaces (use `covers:` globs to group), or a surface with `excluded:` and a "
                 f"reason: {listing}{more}")
     elif stage >= 1:
-        warn("no .clickthrough/inventory.json: run ct-inventory.py --json --out .clickthrough/inventory.json "
+        err("no .clickthrough/inventory.json: run ct-inventory.py --json --out .clickthrough/inventory.json "
              "so coverage can be checked against the code")
+
+    matrix_open = []
+    if stage >= 3:
+        try:
+            matrix = yaml.safe_load(local_file(root, ".clickthrough/coverage.yaml").read_text())
+            checks = matrix["checks"]
+            if not isinstance(checks, list) or any(not isinstance(c, dict) for c in checks):
+                raise ValueError("checks must be a list of objects")
+            categories = {c.get("category") for c in checks}
+            if set(CATEGORIES) - categories:
+                err("coverage categories missing: " + ", ".join(sorted(set(CATEGORIES) - categories)))
+            seen_checks = set()
+            by_id = {f["id"]: f for f in flows}
+            for c in checks:
+                cid = c.get("id")
+                if not isinstance(cid, str) or cid in seen_checks:
+                    raise ValueError("coverage check ids must be unique strings")
+                seen_checks.add(cid)
+                if c.get("category") not in CATEGORIES:
+                    err(f"{cid}: unknown coverage category")
+                status = c.get("status")
+                if status not in ("pass", "fail", "blocked", "untested", "not_applicable"):
+                    err(f"{cid}: invalid coverage status")
+                if status in ("blocked", "not_applicable") and not c.get("reason"):
+                    err(f"{cid}: {status} needs a reason")
+                refs = c.get("flows") or []
+                if not isinstance(refs, list) or any(not isinstance(f, str) or f not in by_id for f in refs):
+                    err(f"{cid}: coverage names unknown flows")
+                    continue
+                if c.get("category") == "external_services" and status == "pass":
+                    if c.get("verification") not in ("sandbox", "real"):
+                        err(f"{cid}: external service readiness needs verification: sandbox or real; a double is contract evidence only")
+                if status in ("pass", "fail"):
+                    if not refs or not c.get("expected"):
+                        err(f"{cid}: executed coverage needs flows and expected outcome")
+                    elif status == "pass" and any(by_id[f]["status"] != "pass" for f in refs):
+                        err(f"{cid}: coverage pass refers to an unpassed flow")
+                    elif status == "pass":
+                        for fid in refs:
+                            receipt = json.loads(local_file(root, (by_id[fid].get("last_run") or {}).get("result")).read_text())
+                            if not any(cid in a.get("check_ids", []) and a.get("passed") is True for a in receipt.get("assertions", [])):
+                                err(f"{cid}: {fid} has no passing observation for this coverage check")
+                    elif status == "fail" and not any(by_id[f]["status"] == "fail" for f in refs):
+                        err(f"{cid}: coverage failure has no failed flow")
+                if status != "not_applicable" and status != "pass":
+                    matrix_open.append(cid)
+        except (OSError, ValueError, KeyError, TypeError, AttributeError, yaml.YAMLError) as exc:
+            err(f"invalid coverage.yaml: {exc}")
+        p0_sids = {sid for f in flows if f.get("priority") == "P0" for sid in f.get("surfaces", [])}
+        p0_gids = {f["goal"] for f in flows if f.get("priority") == "P0"}
+        for entity in surfaces + items("goals"):
+            if entity["id"] not in p0_sids | p0_gids or entity.get("excluded"):
+                continue
+            try:
+                card = yaml.safe_load(local_file(root, entity.get("cases")).read_text())
+                if not isinstance(card, dict) or card.get("id") != entity["id"] or not isinstance(card.get("cases"), list) or not card["cases"]:
+                    raise ValueError("use a structured YAML card with id and nonempty cases")
+                case_ids = set()
+                for case in card["cases"]:
+                    if not isinstance(case, dict) or not isinstance(case.get("id"), str) or case["id"] in case_ids:
+                        raise ValueError("case ids must be unique strings")
+                    case_ids.add(case["id"])
+                    if not isinstance(case, dict) or not case.get("id") or not case.get("expectation") or case.get("flow") not in flow_ids:
+                        raise ValueError("each case needs id, expectation and a registered flow")
+                    f = next(f for f in flows if f["id"] == case["flow"])
+                    if entity["id"] not in f.get("surfaces", []) and entity["id"] != f.get("goal"):
+                        raise ValueError("case flow does not cover this component/workflow")
+                    if f["status"] != "pass":
+                        matrix_open.append(case["id"])
+                    else:
+                        receipt = json.loads(local_file(root, (f.get("last_run") or {}).get("result")).read_text())
+                        if not any(case["id"] in a.get("case_ids", []) and a.get("passed") is True for a in receipt.get("assertions", [])):
+                            err(f"{entity['id']}: case {case['id']} has no passing observation in its flow receipt")
+            except (OSError, ValueError, TypeError, AttributeError, yaml.YAMLError) as exc:
+                err(f"{entity['id']}: invalid case card: {exc}")
 
     # ---- summary ----------------------------------------------------------
     print(f"{args.file}: {len(persona_ids)} personas, {len(surface_ids)} surfaces, "
@@ -366,7 +528,7 @@ def main():
             if total:
                 detail = ", ".join(f"{k} {v}" for k, v in sorted(counts.items()))
                 print(f"  {priority}: {total} flows ({detail})")
-    tested_statuses = {"pass", "fail", "likely_broken", "blocked"}
+    tested_statuses = {"pass", "fail"}
     untested = [f for f in flows if f.get("status") not in tested_statuses]
     if stage >= 3 and untested:
         by_priority = Counter(f.get("priority") for f in untested)
@@ -400,10 +562,16 @@ def main():
     for line in errors:
         print(f"ERROR {line}")
 
+    verdict = "CANNOT TELL (evaluation not complete)"
     if stage >= 3 and flows:
+        serious = [b for b in bug_list if b.get("status") in ("open", "wont_fix") and b.get("severity") in ("critical", "high")]
         p0 = [f for f in flows if f.get("priority") == "P0"]
         if errors:
             verdict = "CANNOT TELL (fix the errors above first)"
+        elif any(b.get("how_known") == "ran" for b in serious):
+            verdict = "NOT READY"
+        elif serious:
+            verdict = "CANNOT TELL, likely NOT READY (unresolved critical/high findings)"
         elif not p0:
             verdict = "CANNOT TELL (no P0 flows defined)"
         elif any(f.get("status") == "fail" for f in p0):
@@ -418,6 +586,8 @@ def main():
             if untested:
                 verdict = (f"CANNOT TELL (every P0 flow passed, but tested only "
                            f"{len(flows) - len(untested)} of {len(flows)} flows)")
+            elif matrix_open:
+                verdict = "CANNOT TELL (coverage checks not passed: " + ", ".join(matrix_open) + ")"
             elif not open_areas and shallow:
                 verdict = ("CANNOT TELL (every P0 flow written passed, but these P0 components "
                            "were not tested in depth with ct-cases: "
@@ -433,7 +603,13 @@ def main():
         print(f"Verdict from the registry: {verdict}")
 
     print(f"{len(errors)} error(s), {len(warnings)} warning(s)")
-    sys.exit(1 if errors else 0)
+    if args.json:
+        builtins.print(json.dumps({"version": 1, "verdict": verdict, "errors": errors, "warnings": warnings,
+            "coverage": {"total": len(flows), "executed": sum(f.get("status") in tested_statuses for f in flows),
+                         **dict(Counter(f.get("status") for f in flows))},
+            "flows": [{"id": f["id"], "status": f.get("status"), "finding": f.get("finding", "")} for f in flows],
+            "bugs": [{"id": b.get("id"), "status": b.get("status"), "severity": b.get("severity")} for b in bug_list]}))
+    sys.exit(1 if errors else (2 if args.require_ready and verdict != "READY" else 0))
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ thing. Components first (sections 1 to 5), then whole workflows (section 6).
 
 ## 1. Understand it (the component card)
 
-Write `.clickthrough/cases/<surface-id>.md`, starting with a card, and check
+Write `.clickthrough/cases/<surface-id>.yaml`, starting with a card, and check
 every line of it against the running product (or the code, if it cannot
 run):
 
@@ -87,7 +87,7 @@ first task; or place an order → pay → ship → return → refund.
 Many breaks only show here: each screen works alone, and the handoff
 between them does not.
 
-1. **Understand it (the workflow card)**, in `.clickthrough/cases/<goal-id>.md`:
+1. **Understand it (the workflow card)**, in `.clickthrough/cases/<goal-id>.yaml`:
    the goal; every step, with the component and the role doing it; what
    each step hands to the next (a record, a status, a link, an email, a
    token); where the journey can start; where it ends and what must then
@@ -120,3 +120,17 @@ between them does not.
 
 For a component that cannot run, list and reason through the cases in
 code; failures are `likely_broken` with a confidence.
+
+## Machine-readable cards and coverage
+
+Use `.clickthrough/templates/case-card.yaml`: each card has `id` and a nonempty
+`cases` list of `{id, flow, expectation}`. Each flow must cover that component or
+workflow. Record observations with the matching `case_ids` in the runner's
+assertions. Keep narrative notes in a separate Markdown file if useful.
+
+Fill `.clickthrough/coverage.yaml` for accessibility, devices, recovery,
+concurrency, background work, upgrades, performance and external services. Split
+categories into concrete checks; include their IDs in assertion `check_ids`.
+State browser versions, data volumes, performance thresholds and provider sandbox
+versus double before running. `not_applicable` needs a reason; an untested or
+blocked check never becomes a pass merely because its card exists.

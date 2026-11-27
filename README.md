@@ -32,7 +32,7 @@ git clone --depth 1 https://github.com/paarths-collab/Clickthrough.git /tmp/clic
 ```
 
 Commit what it adds and merge it into your default branch.
-It never deletes anything and is safe to run again.
+It preserves audit records, validates instruction markers, and backs up replaced files. It is safe to run again.
 
 **2. Ask.** In a new session (not the one that built the product):
 
@@ -94,8 +94,31 @@ More in [`skills/`](skills/). Try it on the bundled demo apps with planted bugs:
 
 ## Requirements
 
-bash and git to install, Python 3 with PyYAML for the checker.
+bash, git and Python 3.10+ to install; PyYAML for the checker and runner.
 The agent picks its own tools to drive your product.
+
+
+## Evidence-backed release checks
+
+The runner captures observed assertions and hashes the product, test and evidence.
+The release gate rejects stale evidence, missing coverage and unresolved critical/high
+bugs. Blocked and traced flows are shown separately from executed flows.
+
+```bash
+python3 .clickthrough/bin/ct.py doctor
+python3 .clickthrough/bin/ct.py resume
+python3 .clickthrough/bin/ct-check.py --json --require-ready
+```
+
+See [the runner and upgrade guide](docs/runner.md),
+[service-double failure scenarios](docs/service-doubles.md), and
+[behavioral evaluations and benchmarks](docs/evaluations.md).
+Raw recordings stay private and Git-ignored. Share reviewed sanitized exports.
+
+The recorded hard-demo baseline and treatment both found 25/25 planted issues;
+the treatment produced a reusable flow/test record at higher initial cost. These
+exploratory runs do not establish a detection improvement. The benchmark tooling
+requires repeated comparable cohorts before presenting a comparison.
 
 ## License
 

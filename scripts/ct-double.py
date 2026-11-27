@@ -45,6 +45,7 @@ with its answers; it does not prove the real service behaves the same.
 Streaming is supported for the OpenAI shape only (one chunk, then [DONE]).
 """
 import argparse
+from ct_core import redact
 import fnmatch
 import json
 import re
@@ -62,6 +63,7 @@ INBOX = []
 CONFIG = {"routes": [], "llm": {}}
 PRESETS = set()
 RECORD = None
+COUNTERS = {}
 LINK = re.compile(r"https?://[^\s\"'<>)]+")
 
 
@@ -102,6 +104,13 @@ def add_mail(provider, sender, to, subject, text, html):
 def email_preset(method, path, body, form):
     if method != "POST":
         return None
+    # These are minimal local contracts, not certification of provider compatibility.
+    required = {"/emails": ("from", "to", "subject"), "/v3/mail/send": ("from", "personalizations", "content"),
+                "/email": ("From", "To", "Subject"), "/v2/email/outbound-emails": ("FromEmailAddress", "Destination", "Content")}
+    if path in required and any(not body.get(k) for k in required[path]):
+        return 400, {"error": "missing required email fields", "required": required[path]}
+    if re.fullmatch(r"/v3/[^/]+/messages", path) and any(not form.get(k) for k in ("from", "to", "subject")):
+        return 400, {"error": "missing required form email fields"}
     if path == "/emails":  # Resend
         m = add_mail("resend", body.get("from"), as_list(body.get("to")), body.get("subject"),
                      body.get("text"), body.get("html"))
@@ -192,7 +201,7 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):  # quiet; everything is in /_uf/requests
         pass
 
-    def _send(self, status, payload, content_type="application/json"):
+    def _send(self, status, payload, content_type="application/json", headers=None):
         data = payload if isinstance(payload, (bytes, str)) else json.dumps(payload)
         if isinstance(data, str):
             data = data.encode("utf-8")
@@ -202,8 +211,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", self.headers.get("Origin") or "*")
         self.send_header("Access-Control-Allow-Headers", "*")
         self.send_header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+        for key, value in (headers or {}).items():
+            self.send_header(key, str(value))
         self.end_headers()
-        self.wfile.write(data)
+        if self.command != "HEAD":
+            self.wfile.write(data)
 
     def _handle(self):
         url = urlparse(self.path)
@@ -233,28 +245,44 @@ class Handler(BaseHTTPRequestHandler):
                  "query": {k: v[0] if len(v) == 1 else v for k, v in query.items()},
                  "headers": headers, "body": body if body else (form or text)}
         answer = None
-        if "email" in PRESETS:
+        selected = None
+        # Explicit routes override presets; each response sequence has its own counter.
+        for index, route in enumerate(CONFIG.get("routes", [])):
+            if route.get("method", "GET").upper() in (self.command, "ANY") and fnmatch.fnmatchcase(path, route.get("path", "")):
+                with LOCK:
+                    n = COUNTERS.get(index, 0)
+                    COUNTERS[index] = n + 1
+                sequence = route.get("responses") or [route]
+                selected = sequence[min(n, len(sequence) - 1)]
+                missing = [k for k in route.get("required", []) if not isinstance(body, dict) or k not in body]
+                if missing:
+                    answer = (400, {"error": "missing required fields", "fields": missing})
+                else:
+                    payload = selected.get("json") if "json" in selected else selected.get("body", "")
+                    answer = (int(selected.get("status", 200)), payload,
+                              "application/json" if "json" in selected else selected.get("content_type", "text/plain"),
+                              selected.get("headers", {}))
+                break
+        if answer is None and "email" in PRESETS:
             answer = email_preset(self.command, path, body if isinstance(body, dict) else {}, form)
         if answer is None and "llm" in PRESETS:
             answer = llm_preset(self.command, path, body if isinstance(body, dict) else {})
         if answer is None and "webhook" in PRESETS and path.startswith("/hooks/") and self.command == "POST":
             answer = (200, {"ok": True})
         if answer is None:
-            for route in CONFIG.get("routes", []):
-                if route.get("method", "GET").upper() in (self.command, "ANY") and \
-                        fnmatch.fnmatchcase(path, route.get("path", "")):
-                    payload = route.get("json") if "json" in route else route.get("body", "")
-                    answer = (int(route.get("status", 200)), payload,
-                              "application/json" if "json" in route else route.get("content_type", "text/plain"))
-                    break
-        if answer is None:
             answer = (404, {"error": "no ct-double route", "method": self.command, "path": path})
         entry["status"] = answer[0]
+        entry = redact(entry, tuple(k.lower() for k in CONFIG.get("redact_keys", [])), CONFIG.get("redact_patterns", []))
         with LOCK:
             REQUESTS.append(entry)
             if RECORD:
                 with open(RECORD, "a", encoding="utf-8") as handle:
                     handle.write(json.dumps(entry) + "\n")
+        if selected:
+            time.sleep(min(max(float(selected.get("delay_ms", 0)), 0), 60000) / 1000)
+            if selected.get("disconnect"):
+                self.close_connection = True
+                return
         self._send(*answer)
 
     def _introspect(self, path, query):
@@ -262,6 +290,7 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 REQUESTS.clear()
                 INBOX.clear()
+                COUNTERS.clear()
             return self._send(200, {"cleared": True})
         if path == "/_uf/requests":
             pattern = (query.get("path") or ["*"])[0]
@@ -306,6 +335,14 @@ def main():
             data = json.loads(text)
         CONFIG["routes"] = data.get("routes", [])
         CONFIG["llm"] = data.get("llm", {})
+        CONFIG["redact_keys"] = data.get("redact_keys", [])
+        CONFIG["redact_patterns"] = data.get("redact_patterns", [])
+        for pattern in CONFIG["redact_patterns"]:
+            re.compile(pattern)
+        for route in CONFIG["routes"]:
+            sequence = route.get("responses", [route])
+            if not isinstance(sequence, list) or not sequence or any(not isinstance(r, dict) for r in sequence):
+                parser.error("route responses must be a nonempty list of objects")
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     scheme = "http"
     if args.tls_cert and args.tls_key:

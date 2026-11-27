@@ -95,8 +95,8 @@ Follow `.clickthrough/guide.md`. Log each step in `decisions.md`.
 
 ## The verdict
 
-- **READY**: every P0 flow is `pass` with evidence on this commit.
-- **NOT READY**: any P0 flow is `fail`.
+- **READY**: `ct-check.py --require-ready` succeeds under the shared guide policy.
+- **NOT READY**: any P0 flow fails or any confirmed critical/high bug remains unresolved.
 - **CANNOT TELL**: the product would not run, or any P0 flow is
   `unverified`, `blocked` or `likely_broken`. If any P0 flow is
   `likely_broken`, say "CANNOT TELL, likely NOT READY" and lead with
@@ -124,3 +124,9 @@ After the builder has fixed things:
 - Mark something pass because the code looks right.
 - Drop a flow from the report because it could not be tested. It goes under
   "Not verified" with what would be needed.
+
+Use the runner's receipt path as `last_run.result`; filenames alone are not proof.
+Compare the last summary with `ct.py status --compare <previous-summary.json>` to
+show new failures, recoveries, removed flows and remaining work. Raw evidence is
+private; use `ct.py export` for reviewed sanitized derivatives. Do not commit raw
+recordings. Save summaries under the current run with `ct.py status --save`.

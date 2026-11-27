@@ -1,0 +1,36 @@
+name: behavior evaluations
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 5 * * 1'
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    # Adapters are opt-in: no model spend is enabled by installing this workflow.
+    if: ${{ vars.CT_EVAL_RUNNER != '' && vars.CT_EVAL_GRADER != '' && vars.CT_EVAL_BUDGET_USD != '' && vars.CT_EVAL_MAX_CALL_USD != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r requirements-dev.txt
+      - name: Run separate evaluation and grading adapters
+        env:
+          CT_EVAL_API_KEY: ${{ secrets.CT_EVAL_API_KEY }}
+          CT_EVAL_RUNNER: ${{ vars.CT_EVAL_RUNNER }}
+          CT_EVAL_GRADER: ${{ vars.CT_EVAL_GRADER }}
+          CT_EVAL_BUDGET_USD: ${{ vars.CT_EVAL_BUDGET_USD }}
+          CT_EVAL_MAX_CALL_USD: ${{ vars.CT_EVAL_MAX_CALL_USD }}
+        run: >-
+          python scripts/ct-evals.py --runner "$CT_EVAL_RUNNER" --grader "$CT_EVAL_GRADER"
+          --budget-usd "$CT_EVAL_BUDGET_USD" --max-call-usd "$CT_EVAL_MAX_CALL_USD"
+          --out evals/results/latest.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: behavior-evaluations
+          path: evals/results/
+          retention-days: 7

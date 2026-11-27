@@ -70,17 +70,17 @@ to the result they can see and that is still there when they come back.
 
 | Path | What it is |
 |---|---|
-| `.clickthrough/flows.yaml` | The registry: product, how to run it, personas, surfaces, goals, flows, status. Single source of truth. Committed. |
+| `.clickthrough/flows.yaml` | The registry: product, how to run it, personas, surfaces, goals, flows, status. Single source of truth. May be committed when authorized. |
 | `.clickthrough/guide.md` | This file. |
-| `.clickthrough/tool-gaps.md` | Things you wanted to do and could not. Committed. |
+| `.clickthrough/tool-gaps.md` | Things you wanted to do and could not. May be committed when authorized. |
 | `.clickthrough/bin/` | Helper scripts: `new-run.sh`, `collect-run.sh`, `ct-check.py`, `ct-inventory.py` (code dissection), `ct-double.py` (stand-in for outside services that records what the product sends). |
 | `.clickthrough/runs/<run-id>/` | One folder per run: `run.json`, `decisions.md`, `report.md`, `evidence/`, `raw/`. Never committed. |
-| `.clickthrough/bugs.yaml` | The bug register: every bug found, once, across all runs, with the flows it breaks and its status. Committed. |
-| `.clickthrough/proof/<bug-id>/` | Proof for each bug: the verifier's video and trace, or request/response transcript. Small files, secrets masked. Committed. |
-| `.clickthrough/inventory.json` | The code map from `ct-inventory.py`: every entry point; the registry must cover all of it. Committed. |
-| `.clickthrough/batches.md`, `.clickthrough/next.md` | Batch plan and "continue here" note for long audits (`ct-parallel`). Committed. |
-| `.clickthrough/cases/<surface-id>.md` | Component card and every case for one component (`ct-cases`). Committed. |
-| `clickthrough-tests/` | One test file per flow, plus `<surface-id>.cases.*` table tests. Committed. |
+| `.clickthrough/bugs.yaml` | The bug register: every bug found, once, across all runs, with the flows it breaks and its status. May be committed when authorized. |
+| `.clickthrough/proof/<bug-id>/` | Private, Git-ignored bug recordings. Share only reviewed, sanitized derivatives. |
+| `.clickthrough/inventory.json` | The code map from `ct-inventory.py`: every entry point; the registry must cover all of it. May be committed when authorized. |
+| `.clickthrough/batches.md`, `.clickthrough/next.md` | Batch plan and "continue here" note for long audits (`ct-parallel`). May be committed when authorized. |
+| `.clickthrough/cases/<surface-id>.yaml` | Component card and every case for one component (`ct-cases`). May be committed when authorized. |
+| `clickthrough-tests/` | One test file per flow, plus `<surface-id>.cases.*` table tests. May be committed when authorized. |
 
 ## Targets: code, local copy, staging, production
 
@@ -240,8 +240,7 @@ calls or console errors, and the result of checking what was saved.
 Later passes get their own folders so nothing is overwritten:
 `evidence/rerun/<flow-id>/` for the solo rerun of a failure and
 `evidence/walk/<flow-id>/` for the hand walk. In the registry, write
-evidence paths relative to the project root; `ct-check.py` checks that they
-exist.
+evidence paths relative to the project root; `ct-check.py` validates execution receipts, product/test identity, and artifact hashes. A filename alone is insufficient.
 
 The registry, `tool-gaps.md` and `clickthrough-tests/` are meant to be
 committed, but committing is the human's call. Leave them in the working
@@ -260,3 +259,23 @@ Do not try to hold the whole product in one session. Split it into **areas**
 registry, and finish one area at a time. The registry is your memory: before
 doing anything, read it and continue from what is not done. Say in the
 report which areas were covered and which were not.
+
+## Enforced release and evidence policy
+
+The installed `templates/runner.md` documents the runner and migration protocol.
+Use `ct.py run` for executions and `ct-check.py --require-ready --json` for the
+release gate. Every pass/fail needs `last_run.result`: a receipt tied to the run,
+current product content, test hash, observed assertions and hashed artifacts.
+Independent review still decides whether those assertions actually test the claim.
+
+Critical/high open or wont-fix confirmed bugs block READY regardless of priority;
+unconfirmed serious findings mean CANNOT TELL, likely NOT READY. Every catalogued
+flow must run. Blocked and traced flows never count as executed. P0 case cards
+are structured YAML, and coverage.yaml records every applicable quality dimension.
+Missing/stale evidence, unreconciled inventory or unresolved coverage prevents READY.
+
+Do not commit or publish unless the user requested it. Checkpoint by writing files
+atomically and saving next.md; a checkpoint does not imply a Git commit. A stated
+spending/time cap always takes precedence over the number of remaining flows.
+At the cap, preserve progress and report the remaining work without claiming full
+coverage. Never infer spending permission from a plan name.

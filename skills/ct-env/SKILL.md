@@ -1,13 +1,13 @@
 ---
 name: ct-env
-description: Build a disposable, local, test-only copy of the whole product - every service, seeded data, a test account per role, an inbox for email - started and reset with one command, and committed so every later audit and CI run reuses it. Use when the product cannot be started for testing, when ct-preflight is blocked, or when asked to set up a test environment.
+description: Build a disposable, local, test-only copy of the whole product - every service, seeded data, a test account per role, an inbox for email - started and reset with one command, and saved so every later audit and CI run reuses it. Use when the product cannot be started for testing, when ct-preflight is blocked, or when asked to set up a test environment.
 ---
 
 # A test copy of the product, once, for every run after
 
 Every audit needs the product running with data and accounts. If each run
 rebuilds that by hand, every run is slow and different. Build it once,
-commit it, and reuse it.
+save it, and reuse it. Commit only when the user authorized it.
 
 ## Rules
 

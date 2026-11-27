@@ -1,0 +1,14 @@
+# Every category must be represented. Split these into specific checks for your
+# product. A pass/fail requires registered flow ids and an expected outcome.
+# external_services pass also needs verification: sandbox | real (double is insufficient).
+# not_applicable requires a reason; blocked/untested never count as executed.
+version: 1
+checks:
+  - {id: Q01, category: accessibility, status: untested, flows: [], expected: "P0 journeys complete with keyboard and accessible names; focus and errors announced"}
+  - {id: Q02, category: devices, status: untested, flows: [], expected: "Named supported browsers, phone viewport, zoom and touch complete the journeys"}
+  - {id: Q03, category: recovery, status: untested, flows: [], expected: "Disconnect, timeout after write and refresh do not lose or duplicate work"}
+  - {id: Q04, category: concurrency, status: untested, flows: [], expected: "Concurrent edits, repeated submits and permission revocation preserve invariants"}
+  - {id: Q05, category: background, status: untested, flows: [], expected: "Duplicate/out-of-order delivery, poison records, restart and retry exhaustion are handled"}
+  - {id: Q06, category: upgrades, status: untested, flows: [], expected: "Previous-version data, links and sessions survive the upgrade"}
+  - {id: Q07, category: performance, status: untested, flows: [], expected: "Record agreed latency/queue limits and representative data volumes before testing"}
+  - {id: Q08, category: external_services, status: untested, flows: [], expected: "Separate double contract checks from provider sandbox verification"}

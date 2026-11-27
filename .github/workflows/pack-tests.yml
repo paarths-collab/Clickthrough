@@ -3,25 +3,26 @@ name: pack tests
 on:
   pull_request:
   push:
-    branches: [feature/user-flow-qa]
+    branches: ['**']
 
 permissions:
   contents: read
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         python: ["3.10", "3.13"]
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
       - name: Install PyYAML
-        run: pip install pyyaml
+        run: pip install -r requirements-dev.txt
       - name: Shell scripts parse
         run: |
           bash -n install.sh
