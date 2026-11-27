@@ -2,7 +2,7 @@
 ## Readiness rules (Clickthrough)
 
 - Never say a project or feature is "ready", "done", "working" or "complete"
-  unless a user-flow report exists for the current commit in
+  unless the evidence-backed release gate (`ct-check.py --require-ready`) passes and a current report exists in
   `.clickthrough/runs/` with every P0 flow passing with evidence. If there is no
   such report, say exactly what has and has not been verified by using the
   product.

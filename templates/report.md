@@ -19,8 +19,9 @@ no file names.>
 <Two or three sentences in plain words: can a real user use this, and what
 is the worst thing they will hit.>
 
-READY needs every P0 flow passing with evidence. CANNOT TELL means the
-product could not be run or P0 flows are unverified.
+Use the verdict from `ct-check.py --require-ready --json`. Fresh receipts, all
+flows executed, reconciled inventory, required cases and coverage, and no blocking
+critical/high bugs are required. Blocked/traced flows are not counted as executed.
 
 ## Is the software alive
 
@@ -180,3 +181,19 @@ for the next run to test the blocked flows.>
 - Flaky flows (different result on rerun): <list or none>
 - Test defects found and fixed during this run: <list or none>
 - Test tooling added to the project: <packages and files, or none>
+
+## Changes since the previous audit
+
+New failures, recovered flows, removed flows and still-blocked flows, from
+`ct.py status --compare`. State whether this was a full audit or a narrower check.
+
+## Quality dimensions
+
+Summarize coverage.yaml: applicable checks, executions, failures, blocked checks,
+and reasons for exclusions. Include supported browsers/devices, performance limits
+and dataset sizes, and provider sandbox results separately from service doubles.
+
+## Next action and cost
+
+The next flows/checks to run, what unlocks them, elapsed time and observed usage.
+Do not estimate token cost as if it were measured. Respect the user's cap.

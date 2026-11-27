@@ -58,7 +58,7 @@ never sent). So map every whole workflow now, not later:
 - For every goal (from the intent, the navigation and the code map: sign
   up, invite and join, create and share, request and approve, pay, export,
   delete, an agent drafting and a human approving, a job acting on data),
-  write its workflow card in `.clickthrough/cases/<goal-id>.md` as `ct-cases`
+  write its workflow card in `.clickthrough/cases/<goal-id>.yaml` as `ct-cases`
   section 6 describes: the steps, who does each, what each step hands to
   the next, every path from start to end, every branch, and the ways
   people leave the path.

@@ -75,8 +75,7 @@ records it, so a human can see the bug without rerunning anything:
   command, output and exit code (a terminal recording when the tool is
   interactive);
 - plus the data check that shows what was saved, sent or leaked.
-Save it in `.clickthrough/proof/<bug-id>/` (committed, so it outlives the
-session), name it after the flow (`F031.webm`, `F031-trace.zip`,
+Save it in `.clickthrough/proof/<bug-id>/` (private and Git-ignored; it outlives the session locally), name it after the flow (`F031.webm`, `F031-trace.zip`,
 `F031.txt`), keep each file small (short clip, low resolution; under
 about 5 MB), and mask passwords, tokens and personal data. Link it from
 the bug's `proof:` in the bug register. A bug found by running with no
@@ -87,10 +86,8 @@ are noted in `decisions.md`. Keep every test file path the tester wrote.
 Each failure goes into the bug register (`.clickthrough/bugs.yaml`): add it to
 an existing bug with the same cause, or open a new one.
 
-Then mark the batch done in `batches.md` and commit the registry, the bug
-register and the tests. Commit after every batch, small enough that a
-session ending without warning (time, context, or a usage limit) loses at
-most one batch.
+Then mark the batch done and save the registry, bug register and tests atomically.
+Checkpoint after every batch. Commit only when the user has authorized commits.
 
 ## Match the helpers to the machine
 
@@ -103,12 +100,12 @@ rerun alone before it counts.
 ## 5. Carry on until the list is done
 
 Keep starting batches until every flow is tested or blocked with a reason.
-There is no sampling and no budget cut-off: the goal is every bug. A
+Keep the full catalogue, but obey every spending/time cap. A
 smaller usage plan only means more sessions; the registry, the bug
 register and `next.md` carry the work from one session to the next.
 If this session cannot finish (time, context, cost), do not drop flows and
 do not end with "not covered" alone:
-- commit the registry, tests and `batches.md`;
+- save the registry, tests and `batches.md`; commit only when authorized;
 - write `.clickthrough/next.md`: what is done (X of Y), the next batches, and
   anything the next session needs to know;
 - tell the human to start a new session with "Continue the user-flow

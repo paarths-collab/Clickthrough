@@ -1,5 +1,6 @@
 """Tests for scripts/ct-double.py: the stand-in for outside services."""
 import json
+import http.client
 import os
 import socket
 import subprocess
@@ -26,7 +27,12 @@ class DoubleTest(unittest.TestCase):
         cls.tmp = tempfile.TemporaryDirectory()
         config = os.path.join(cls.tmp.name, "double.json")
         with open(config, "w") as handle:
-            json.dump({"routes": [{"method": "GET", "path": "/v1/accounts*", "status": 200, "json": {"items": [1]}}],
+            json.dump({"routes": [{"method": "GET", "path": "/v1/accounts*", "status": 200, "json": {"items": [1]}},
+                {"method": "POST", "path": "/hooks/sequence", "required": ["event"], "responses": [
+                    {"status": 429, "headers": {"Retry-After": "1"}, "json": {"error": "rate limited"}},
+                    {"status": 200, "delay_ms": 20, "json": {"ok": True}}]},
+                {"method": "POST", "path": "/hooks/disconnect", "responses": [
+                    {"disconnect": True}, {"status": 200, "json": {"ok": True}}]}],
                        "llm": {"replies": [{"match": "delete", "tool_call": {"name": "delete_record", "arguments": {"id": 7}}}],
                                "default": "hello"}}, handle)
         cls.port = free_port()
@@ -88,6 +94,35 @@ class DoubleTest(unittest.TestCase):
         self.assertEqual(status, 404)
         status, requests = self.call("GET", "/_uf/requests?path=/v2/unknown")
         self.assertEqual(len(requests), 1)
+
+    def test_empty_email_is_refused(self):
+        status, body = self.call('POST', '/emails', {})
+        self.assertEqual(status, 400)
+        self.assertIn('required', body)
+
+    def test_sequence_overrides_preset_and_can_reset(self):
+        self.call('DELETE', '/_uf/requests')
+        status, _ = self.call('POST', '/hooks/sequence', {'event': 'created'})
+        self.assertEqual(status, 429)
+        started = time.monotonic()
+        status, _ = self.call('POST', '/hooks/sequence', {'event': 'created'})
+        self.assertEqual(status, 200)
+        self.assertGreaterEqual(time.monotonic() - started, .015)
+        self.call('DELETE', '/_uf/requests')
+        self.assertEqual(self.call('POST', '/hooks/sequence', {'event': 'created'})[0], 429)
+        self.assertEqual(self.call('POST', '/hooks/sequence', {})[0], 400)
+
+    def test_disconnect_then_success(self):
+        with self.assertRaises((http.client.RemoteDisconnected, urllib.error.URLError)):
+            self.call('POST', '/hooks/disconnect', {})
+        self.assertEqual(self.call('POST', '/hooks/disconnect', {})[0], 200)
+
+    def test_nested_and_query_credentials_are_redacted(self):
+        self.call('POST', '/hooks/private?access_token=fake-token', {'nested': {'password': 'fake-password'}, 'url': 'https://example.test/?token=fake-link'})
+        status, requests = self.call('GET', '/_uf/requests?path=/hooks/private')
+        text = json.dumps(requests[-1])
+        self.assertNotIn('fake-', text)
+        self.assertIn('<redacted>', text)
 
 
 if __name__ == "__main__":

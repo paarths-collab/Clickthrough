@@ -22,6 +22,8 @@ some matches are false. Check each entry against the code. No network
 access, no writes outside --out. Needs only Python 3.
 """
 import argparse
+import ast
+from ct_core import identity
 import json
 import os
 import re
@@ -33,7 +35,7 @@ SKIP_DIRS = {".git", "node_modules", "vendor", "dist", "build", "out", "target",
              ".clickthrough", "clickthrough-tests", ".claude", ".agents", "Pods", "DerivedData"}
 CODE_EXT = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".rb", ".go", ".rs",
             ".java", ".kt", ".kts", ".scala", ".cs", ".php", ".ex", ".exs", ".swift",
-            ".html", ".c", ".cc", ".cpp", ".h", ".hpp", ".vue", ".svelte", ".dart", ".sql"}
+            ".html", ".c", ".cc", ".cpp", ".h", ".hpp", ".vue", ".svelte", ".dart", ".sql", ".astro", ".mdx"}
 # A file is test code when its own name says so (x.test.ts, x_test.go,
 # test_x.py, XTest.java, x.spec.js, fixtures, stories) or it sits in a test
 # folder that is not part of the app's routes. A folder merely named
@@ -143,7 +145,7 @@ def page_from_path(rel):
     if m and not m.group(1).startswith(("_", "api/")):
         route = re.sub(r"/?index$", "", m.group(1))
         return "/" + route
-    m = re.search(r"(?:^|/)routes/(.+?)/\+page\.svelte$", rel)
+    m = re.search(r"(?:^|/)routes/(.*?)/?\+page\.svelte$", rel)
     if m:
         return "/" + m.group(1)
     return None
@@ -161,7 +163,8 @@ def api_from_path(rel):
     return None
 
 
-def scan(root):
+def scan(root, diagnostics=None):
+    diagnostics = diagnostics if diagnostics is not None else []
     found = []
     seen = set()
     for dirpath, dirnames, filenames in os.walk(root):
@@ -171,6 +174,8 @@ def scan(root):
             rel = os.path.relpath(path, root)
             ext = os.path.splitext(name)[1].lower()
             if ext not in CODE_EXT and name not in ("vercel.json", "crontab"):
+                if ext in (".yaml", ".yml", ".toml", ".json", ".sh", ".graphql", ".proto"):
+                    diagnostics.append({"path": rel, "reason": "no static adapter for this file; reconcile with runtime/docs"})
                 continue
             is_test = is_test_path(rel)
             page = page_from_path(rel)
@@ -179,10 +184,12 @@ def scan(root):
             api_path = api_from_path(rel)
             try:
                 if os.path.getsize(path) > MAX_BYTES:
+                    diagnostics.append({"path": rel, "reason": "file exceeds scan size limit"})
                     continue
                 with open(path, encoding="utf-8", errors="replace") as handle:
                     lines = handle.readlines()
             except OSError:
+                diagnostics.append({"path": rel, "reason": "unreadable file"})
                 continue
             text = "".join(lines)
             mcp_file = ("tools/list" in text or "McpServer" in text or "modelcontextprotocol" in text
@@ -191,6 +198,7 @@ def scan(root):
                 found.append({"kind": "page", "what": "/" + name, "where": f"{rel}:1", "test": False})
             for number, line in enumerate(lines, 1):
                 if len(line) > 600:
+                    diagnostics.append({"path": f"{rel}:{number}", "reason": "line exceeds scan length limit"})
                     continue
                 if mcp_file:
                     tool = re.search(r"\bname:\s*['\"]([a-z][a-z0-9_]+)['\"]\s*,?\s*$", line)
@@ -214,6 +222,33 @@ def scan(root):
                             continue
                         seen.add(key)
                         found.append({"kind": kind, "what": what, "where": f"{rel}:{number}", "test": is_test})
+            if api_path and "/pages/" in "/" + rel and not is_test:
+                found.append({"kind": "route", "what": "ANY " + api_path, "where": f"{rel}:1", "test": False})
+            if name == "crontab":
+                for number, line in enumerate(lines, 1):
+                    if line.strip() and not line.lstrip().startswith("#") and (line.lstrip().startswith("@") or len(line.split()) >= 6):
+                        found.append({"kind": "job", "what": line.strip(), "where": f"{rel}:{number}", "test": is_test})
+            if ext == ".py":
+                try:
+                    tree = ast.parse(text)
+                    for node in ast.walk(tree):
+                        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                            continue
+                        for dec in node.decorator_list:
+                            if not isinstance(dec, ast.Call) or not isinstance(dec.func, ast.Attribute) or dec.func.attr not in ("route", "get", "post", "put", "patch", "delete", "head", "options") or not dec.args:
+                                continue
+                            if not isinstance(dec.args[0], ast.Constant) or not isinstance(dec.args[0].value, str):
+                                diagnostics.append({"path": f"{rel}:{dec.lineno}", "reason": "dynamic route needs runtime reconciliation"})
+                                continue
+                            methods = [dec.func.attr.upper()] if dec.func.attr != "route" else ["GET"]
+                            for kw in dec.keywords:
+                                if kw.arg == "methods":
+                                    methods = ast.literal_eval(kw.value)
+                            found[:] = [i for i in found if not (i["kind"] == "route" and i["where"].startswith(rel + ":") and dec.lineno <= int(i["where"].rsplit(":", 1)[1]) <= dec.end_lineno)]
+                            for method in methods:
+                                found.append({"kind": "route", "what": str(method).upper() + " " + dec.args[0].value, "where": f"{rel}:{dec.lineno}", "test": is_test})
+                except (SyntaxError, ValueError, TypeError):
+                    diagnostics.append({"path": rel, "reason": "Python AST or dynamic methods need runtime reconciliation"})
             if name == "vercel.json":
                 try:
                     data = json.load(open(path, encoding="utf-8"))
@@ -241,13 +276,30 @@ def main():
     parser.add_argument("--json", action="store_true", help="print JSON instead of Markdown")
     parser.add_argument("--out", help="write the result to this file")
     parser.add_argument("--include-tests", action="store_true", help="keep matches from test files")
+    parser.add_argument("--runtime", help="local JSON route export (items list) or OpenAPI document; never fetched")
     args = parser.parse_args()
     root = os.path.abspath(args.project)
     if not os.path.isdir(root):
         sys.exit(f"Not a folder: {root}")
-    items = [i for i in scan(root) if args.include_tests or not i["test"]]
+    diagnostics = []
+    items = [i for i in scan(root, diagnostics) if args.include_tests or not i["test"]]
+    if args.runtime:
+        try:
+            runtime = json.load(open(args.runtime, encoding="utf-8"))
+            if "paths" in runtime:
+                extra = [{"kind": "route", "what": method.upper() + " " + path, "where": "runtime:1", "test": False, "source": "runtime"}
+                         for path, methods in runtime["paths"].items() for method in methods
+                         if method.lower() in ("get", "post", "put", "patch", "delete", "head", "options")]
+            else:
+                extra = runtime["items"]
+            if not isinstance(extra, list) or any(not isinstance(i, dict) or not all(isinstance(i.get(k), str) for k in ("kind", "what", "where")) for i in extra):
+                raise ValueError("runtime items require kind, what and where strings")
+            items.extend({**i, "source": "runtime", "test": False} for i in extra)
+        except (OSError, ValueError, KeyError, AttributeError, TypeError) as exc:
+            parser.error(f"invalid runtime inventory: {exc}")
     if args.json:
-        text = json.dumps({"root": root, "items": items}, indent=2)
+        text = json.dumps({"version": 2, **identity(root), "items": items, "diagnostics": diagnostics,
+                           "limits": "Heuristic inventory; reconcile skipped files, mounted/dynamic routes and runtime schemas before readiness."}, indent=2)
     else:
         out = [f"# Code inventory: {os.path.basename(root)}", "",
                "Heuristic map from `ct-inventory.py`. Starting point only: verify each entry, "
@@ -269,6 +321,7 @@ def main():
                 out.append(f"- `{i['what']}`  {i['where']}")
             if len(rows) > 400:
                 out.append(f"- ... {len(rows) - 400} more (use --json for all)")
+        out += ["", "## Scan limits requiring review"] + [f"- {d['path']}: {d['reason']}" for d in diagnostics]
         text = "\n".join(out) + "\n"
     if args.out:
         with open(args.out, "w", encoding="utf-8") as handle:

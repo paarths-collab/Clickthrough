@@ -15,7 +15,11 @@ set -euo pipefail
 
 usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
-[ $# -eq 2 ] || usage
+if [ $# -eq 2 ]; then
+  exec python3 "$(dirname "${BASH_SOURCE[0]}")/scripts/ct-install.py" "$@"
+fi
+[ $# -eq 3 ] && [ "$3" = "--transaction" ] || usage
+set -- "$1" "$2"
 target="$1"
 case "$target" in claude|codex|cursor|both|plugin) ;; *) usage ;; esac
 if [ ! -d "$2" ]; then
@@ -172,13 +176,13 @@ done
 ct="$project/.clickthrough"
 mkdir -p "$ct/bin" "$ct/templates" "$ct/runs" "$project/clickthrough-tests"
 cp "$pack/templates/guide.md" "$ct/guide.md"
-cp "$pack/templates/report.md" "$pack/templates/decisions.md" "$pack/templates/ci-github.yml" "$pack/templates/tester-kit.md" "$ct/templates/"
-cp "$pack/scripts/new-run.sh" "$pack/scripts/collect-run.sh" "$pack/scripts/ct-check.py" "$pack/scripts/ct-inventory.py" "$pack/scripts/ct-double.py" "$ct/bin/"
+cp "$pack/docs/runner.md" "$pack/docs/service-doubles.md" "$pack/templates/case-card.yaml" "$pack/templates/assertions.json" "$pack/templates/report.md" "$pack/templates/decisions.md" "$pack/templates/ci-github.yml" "$pack/templates/tester-kit.md" "$ct/templates/"
+cp "$pack/scripts/ct.py" "$pack/scripts/ct_core.py" "$pack/scripts/ct-new-run.py" "$pack/scripts/new-run.sh" "$pack/scripts/collect-run.sh" "$pack/scripts/ct-check.py" "$pack/scripts/ct-inventory.py" "$pack/scripts/ct-double.py" "$ct/bin/"
 chmod +x "$ct/bin/new-run.sh" "$ct/bin/collect-run.sh" "$ct/bin/ct-check.py" "$ct/bin/ct-inventory.py" "$ct/bin/ct-double.py"
 echo "folder   -> .clickthrough/ (guide, templates, bin)"
 touch_path .clickthrough
 
-for keep in flows.yaml tool-gaps.md bugs.yaml; do
+for keep in flows.yaml tool-gaps.md bugs.yaml coverage.yaml; do
   if [ -f "$ct/$keep" ]; then
     echo "kept     -> .clickthrough/$keep (already there)"
   else
@@ -189,7 +193,7 @@ done
 
 ignore="$project/.gitignore"
 # Run logs can contain secrets; .results/ is the test tool's scratch output.
-for line in '.clickthrough/runs/' 'clickthrough-tests/.results/'; do
+for line in '.clickthrough/runs/' '.clickthrough/proof/' '.clickthrough-backups/' '.ct-install.lock' 'clickthrough-tests/.results/'; do
   if [ -f "$ignore" ] && grep -qxF "$line" "$ignore"; then
     echo "ignore   -> .gitignore already has $line"
   else
@@ -203,7 +207,7 @@ done
 cat <<EOF
 
 Installed. Next:
-  1. Commit and push:
+  1. Review the installed files. If you choose to publish them:
        git add$touched
      Sessions only see what is on the branch they start from: merge it
      into your default branch (or start sessions on this branch).

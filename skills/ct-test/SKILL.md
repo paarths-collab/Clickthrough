@@ -131,3 +131,13 @@ set now is `blocked`, for a flow that cannot be tested: give it a
 
 When every flow has a test file or is `blocked` with a reason, run
 `python3 .clickthrough/bin/ct-check.py --stage test` and fix every error.
+
+## Capture results through the runner
+
+Use `python3 .clickthrough/bin/ct.py run --flow <id> --run-id <run> --target local
+--environment <non-secret stack description> -- <test command>` (one shell line).
+Tests write actual `{expected, observed, passed, case_ids, check_ids}` assertion
+records to `CT_ASSERTIONS_FILE`, and evidence to `CT_EVIDENCE_DIR`. Do not copy a
+prewritten passing array. The runner hashes test, product and artifacts and prints
+the registry patch. The evaluation phase independently reviews and accepts it.
+A command exiting zero without recorded assertions is not a verified flow.

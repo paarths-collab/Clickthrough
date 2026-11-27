@@ -1,0 +1,15 @@
+# Keep narrative design notes beside this file if useful. `cases` in a P0
+# surface/goal points to this structured card, never an arbitrary Markdown file.
+id: S001
+purpose: "What this component or workflow does"
+dimensions:
+  role: [owner, member, other_tenant]
+  state: [empty, populated]
+selection:
+  possible: 6
+  chosen: 6
+  reason: "Every role/state combination"
+cases:
+  - id: S001-C01
+    flow: F001
+    expectation: "The intended item is saved and visible after reload"

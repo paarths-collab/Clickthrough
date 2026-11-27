@@ -28,6 +28,9 @@ jobs:
       - name: Install
         run: echo "Add the project's install command here (npm ci, pip install -r ..., cargo build)"
 
+      - name: Install the registry checker dependency
+        run: python3 -m pip install 'PyYAML>=6.0,<7'
+
       - name: Start the test stack
         run: bash clickthrough-tests/stack/up && bash clickthrough-tests/stack/seed
 
@@ -42,6 +45,10 @@ jobs:
           PY
           bash -c "$(cat /tmp/ct-test-command)"
 
+      # Tests must emit fresh execution receipts via ct.py run (see docs/runner.md).
+      - name: Require evidence-backed readiness
+        run: python3 .clickthrough/bin/ct-check.py --require-ready --json
+
       - name: Stop the test stack
         if: always()
         run: bash clickthrough-tests/stack/down || true
@@ -51,5 +58,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: clickthrough-evidence
-          path: clickthrough-evidence
-          if-no-files-found: ignore
+          path: |
+            clickthrough-evidence
+            .clickthrough/runs/
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: true

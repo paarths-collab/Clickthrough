@@ -34,7 +34,7 @@ Read `.clickthrough/guide.md` now. Its rules apply to everything below.
      `ct-discover` in update mode, then carry on from there.
    - `discover`: the request says "discover", "map" or "list first". Run
      phases 1 to 3 (preflight, discover, catalog with every workflow
-     card), commit the registry, the code map and the cards, and stop.
+     card), save the registry, the code map and the cards, and stop.
      Do not start testing in this mode, not even a few flows: the human
      decides when testing starts.
      Report: entry points, surfaces, workflows, flows by priority, and
@@ -92,9 +92,13 @@ not merge phases or skip one because it looks unnecessary.
 | 4 | `ct-parallel` with `ct-test` and `ct-cases` (helpers in parallel, each with its own data) | How do we check each flow for real? | Every flow is tested or blocked with a reason, batch by batch, or `.clickthrough/next.md` says exactly what is left. |
 | 5 | `ct-evaluate` | What happens when a user does it? | The report is written, states "tested X of Y" per area, and `ct-check.py --stage evaluate` has no errors. |
 
+After installing test tooling, regenerate/reconcile inventory and start a fresh
+testing run if the product fingerprint changed since preflight. Keep the discovery
+run as history. Do not reuse stale receipts.
+
 Do not test before the list is complete, and do not stop testing because
 the P0 flows are done: P0 decides the order, not the scope. If the session
-cannot finish, follow `ct-parallel` section 5 (commit, `next.md`, tell the
+cannot finish, follow `ct-parallel` section 5 (save a checkpoint, `next.md`, tell the
 human to continue) instead of ending with "not covered".
 
 Three kinds of bug, all in one bug register (`.clickthrough/bugs.yaml`):
@@ -124,8 +128,8 @@ during testing.
 
 ## The words you may use
 
-- **READY**: every P0 flow passed with evidence on this commit.
-- **NOT READY**: at least one P0 flow failed.
+- **READY**: the authoritative `ct-check.py --require-ready` gate passes: fresh receipts, every flow executed, required coverage checked, and no blocking serious bugs.
+- **NOT READY**: a P0 flow failed, or a confirmed critical/high bug remains unresolved.
 - **CANNOT TELL**: the product would not run, P0 flows are unverified, or
   part of the list is still untested. Say how much: "tested X of Y".
 

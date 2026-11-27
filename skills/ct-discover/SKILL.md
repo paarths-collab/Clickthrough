@@ -63,7 +63,7 @@ not submit forms just to collect messages; that is what the flows are for.
 ### 3. The code: what exists that you did not see?
 
 Start with `python3 .clickthrough/bin/ct-inventory.py --json --out .clickthrough/inventory.json`
-(commit it; `ct-catalog` and `ct-check.py` use it to check coverage) and
+(save it; `ct-catalog` and `ct-check.py` use it to check coverage) and
 `python3 .clickthrough/bin/ct-inventory.py --out .clickthrough/runs/<run-id>/inventory.md`
 to read.
 It dissects the code into pages, endpoints, CLI commands, agent tools,
@@ -134,3 +134,11 @@ counts of surfaces by type, everything tagged `intent` or `code`, dead nav
 items, and pages with no way in. Ask what is missing or wrong. They know
 things about the product that are written nowhere. In auto mode, skip the
 stop and record that the map was not reviewed.
+
+## Reconcile the inventory
+
+Review diagnostics and merge a local runtime/OpenAPI export with `--runtime` when
+available. Record `inventory_review: {reviewer, notes, product_sha256}` in the
+registry using the current inventory fingerprint. Account for dynamic/mounted
+routes and unsupported files; never use blanket `covers: ["*"]`. Regenerate the
+inventory after product changes. The map is heuristic, not proof of completeness.
